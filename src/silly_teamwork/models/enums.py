@@ -1,0 +1,51 @@
+from enum import StrEnum
+
+
+class TeamRole(StrEnum):
+    OWNER = "owner"
+    ADMIN = "admin"
+    MEMBER = "member"
+
+
+class ProjectRole(StrEnum):
+    OWNER = "owner"
+    MEMBER = "member"
+
+
+class TaskRole(StrEnum):
+    OWNER = "owner"
+    COLLABORATOR = "collaborator"
+    REVIEWER = "reviewer"
+
+
+class ProjectStatus(StrEnum):
+    PLANNING = "planning"
+    ACTIVE = "active"
+    COMPLETED = "completed"
+    ARCHIVED = "archived"
+
+
+class TaskStatus(StrEnum):
+    TODO = "todo"
+    IN_PROGRESS = "in_progress"
+    IN_REVIEW = "in_review"
+    DONE = "done"
+    CANCELLED = "cancelled"
+
+
+class TaskPriority(StrEnum):
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"
+    URGENT = "urgent"
+
+
+class InvitationStatus(StrEnum):
+    ACTIVE = "active"
+    USED = "used"
+    REVOKED = "revoked"
+    EXPIRED = "expired"
+
+
+class SystemAdminRole(StrEnum):
+    SUPER_ADMIN = "super_admin"

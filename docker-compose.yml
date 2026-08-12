@@ -1,0 +1,40 @@
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: silly_teamwork
+      POSTGRES_USER: silly_teamwork
+      POSTGRES_PASSWORD: silly_teamwork
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U silly_teamwork -d silly_teamwork"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: .
+      target: development
+    environment:
+      ENVIRONMENT: development
+      DEBUG: "true"
+      SECRET_KEY: local-development-only-change-me
+      DATABASE_URL: postgresql+asyncpg://silly_teamwork:silly_teamwork@db:5432/silly_teamwork
+    ports:
+      - "8000:8000"
+    volumes:
+      - uploads_data:/app/uploads
+    depends_on:
+      db:
+        condition: service_healthy
+    command: >-
+      sh -c "alembic upgrade head &&
+      uvicorn silly_teamwork.main:app --host 0.0.0.0 --port 8000 --reload"
+
+volumes:
+  postgres_data:
+  uploads_data:
