@@ -49,7 +49,10 @@ REVIEWER_TRANSITIONS = {
 
 
 class TaskService:
-    def __init__(self, access_service: CollaborationAccessService | None = None) -> None:
+    def __init__(
+        self,
+        access_service: CollaborationAccessService | None = None,
+    ) -> None:
         self.access = access_service or CollaborationAccessService()
 
     async def create_task(

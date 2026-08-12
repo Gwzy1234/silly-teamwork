@@ -26,3 +26,5 @@ logs/
 build/
 dist/
 
+# Node
+node_modules/

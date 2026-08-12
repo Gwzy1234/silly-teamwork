@@ -24,6 +24,9 @@ services:
       DEBUG: "true"
       SECRET_KEY: local-development-only-change-me
       DATABASE_URL: postgresql+asyncpg://silly_teamwork:silly_teamwork@db:5432/silly_teamwork
+      DEADLINE_REMINDERS_ENABLED: "true"
+      DEADLINE_REMINDER_INTERVAL_SECONDS: "86400"
+      DEADLINE_DUE_SOON_HOURS: "72"
     ports:
       - "8000:8000"
     volumes:

@@ -23,6 +23,11 @@ async def get_by_id_for_update(session: AsyncSession, task_id: UUID) -> Task | N
     return result.scalar_one_or_none()
 
 
+async def get_status(session: AsyncSession, task_id: UUID) -> TaskStatus | None:
+    result = await session.execute(select(Task.status).where(Task.id == task_id))
+    return result.scalar_one_or_none()
+
+
 async def list_for_project(session: AsyncSession, project_id: UUID) -> list[Task]:
     result = await session.execute(
         select(Task)

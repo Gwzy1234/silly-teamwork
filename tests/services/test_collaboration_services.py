@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 from silly_teamwork.db.base import Base
 from silly_teamwork.models import (
     File,
+    Notification,
     Project,
     ProjectMember,
     ProjectRole,
@@ -202,6 +203,16 @@ async def _user(session: AsyncSession, user_id: UUID) -> User:
     return user
 
 
+async def _notifications_for_task(
+    session: AsyncSession, task_id: UUID, *, user_id: UUID | None = None
+) -> list[Notification]:
+    statement = select(Notification).where(Notification.related_task_id == task_id)
+    if user_id is not None:
+        statement = statement.where(Notification.user_id == user_id)
+    result = await session.execute(statement.order_by(Notification.created_at, Notification.id))
+    return list(result.scalars().all())
+
+
 @pytest.mark.asyncio
 async def test_access_matrix(collaboration_context: CollaborationContext) -> None:
     ctx = collaboration_context
@@ -388,6 +399,73 @@ async def test_task_service_lifecycle_status_and_permissions(
         admin = await _user(session, ctx.admin_id)
         with pytest.raises(TaskAccessDeniedError):
             await service.update_task(session, admin, created_id, TaskUpdate(title="Admin"))
+
+
+@pytest.mark.asyncio
+async def test_task_creation_does_not_generate_assignment_notification(
+    collaboration_context: CollaborationContext,
+) -> None:
+    ctx = collaboration_context
+    service = TaskService()
+    async with ctx.session_factory() as session:
+        creator = await _user(session, ctx.project_owner_id)
+        task = await service.create_task(
+            session,
+            creator,
+            ctx.project_id,
+            TaskCreate(title="Assigned task", owner_user_id=ctx.member_id),
+        )
+        task_id = task.id
+
+    async with ctx.session_factory() as session:
+        assert await _notifications_for_task(session, task_id) == []
+
+
+@pytest.mark.asyncio
+async def test_task_member_add_does_not_generate_notification(
+    collaboration_context: CollaborationContext,
+) -> None:
+    ctx = collaboration_context
+    service = TaskService()
+    async with ctx.session_factory() as session:
+        project_owner = await _user(session, ctx.project_owner_id)
+        await service.add_member(
+            session,
+            project_owner,
+            ctx.task_id,
+            TaskMemberAdd(user_id=ctx.project_owner_id, role=TaskRole.COLLABORATOR),
+        )
+
+    async with ctx.session_factory() as session:
+        assert await _notifications_for_task(session, ctx.task_id) == []
+
+
+@pytest.mark.asyncio
+async def test_task_owner_transfer_does_not_generate_notification(
+    collaboration_context: CollaborationContext,
+) -> None:
+    ctx = collaboration_context
+    service = TaskService()
+    async with ctx.session_factory() as session:
+        project_owner = await _user(session, ctx.project_owner_id)
+        await service.transfer_owner(session, project_owner, ctx.task_id, ctx.collaborator_id)
+
+    async with ctx.session_factory() as session:
+        assert await _notifications_for_task(session, ctx.task_id) == []
+
+
+@pytest.mark.asyncio
+async def test_task_status_change_does_not_generate_notification(
+    collaboration_context: CollaborationContext,
+) -> None:
+    ctx = collaboration_context
+    service = TaskService()
+    async with ctx.session_factory() as session:
+        owner = await _user(session, ctx.member_id)
+        await service.change_status(session, owner, ctx.task_id, TaskStatus.IN_PROGRESS)
+
+    async with ctx.session_factory() as session:
+        assert await _notifications_for_task(session, ctx.task_id) == []
 
 
 @pytest.mark.asyncio

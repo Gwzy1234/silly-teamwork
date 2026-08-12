@@ -37,6 +37,10 @@ class Settings(BaseSettings):
     max_file_size: int = Field(default=20 * 1024 * 1024, gt=0)
     max_upload_size_mb: int = Field(default=20, gt=0)
 
+    deadline_reminders_enabled: bool = True
+    deadline_reminder_interval_seconds: int = Field(default=300, gt=0)
+    deadline_due_soon_hours: int = Field(default=72, gt=0)
+
     seed_admin_username: str = "admin"
     seed_admin_password: SecretStr = SecretStr("admin123456")
     seed_admin_nickname: str = "Administrator"

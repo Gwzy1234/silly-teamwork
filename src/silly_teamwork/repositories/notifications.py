@@ -4,11 +4,37 @@ from uuid import UUID
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from silly_teamwork.models.enums import NotificationType
 from silly_teamwork.models.notification import Notification
 
 
 def add(session: AsyncSession, notification: Notification) -> None:
     session.add(notification)
+
+
+async def find_matching_unread(
+    session: AsyncSession,
+    *,
+    user_id: UUID,
+    notification_type: NotificationType,
+    related_task_id: UUID | None,
+    related_project_id: UUID | None,
+    title: str | None = None,
+    content: str | None = None,
+) -> Notification | None:
+    statement = select(Notification).where(
+        Notification.user_id == user_id,
+        Notification.type == notification_type,
+        Notification.related_task_id == related_task_id,
+        Notification.related_project_id == related_project_id,
+        Notification.is_read.is_(False),
+    )
+    if title is not None:
+        statement = statement.where(Notification.title == title)
+    if content is not None:
+        statement = statement.where(Notification.content == content)
+    result = await session.execute(statement)
+    return result.scalar_one_or_none()
 
 
 async def get_for_user(

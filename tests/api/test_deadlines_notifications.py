@@ -8,6 +8,7 @@ from uuid import UUID
 import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.pool import StaticPool
 
@@ -22,12 +23,15 @@ from silly_teamwork.models import (
     ProjectMember,
     ProjectRole,
     Task,
+    TaskMember,
+    TaskRole,
     TaskStatus,
     Team,
     TeamMember,
     TeamRole,
     User,
 )
+from silly_teamwork.services.deadlines import DeadlineService
 from silly_teamwork.services.exceptions import TaskNotFoundError
 from silly_teamwork.services.notifications import NotificationService
 
@@ -134,6 +138,30 @@ async def deadline_notification_context() -> AsyncIterator[DeadlineNotificationC
             [accessible_task, overdue_task, inaccessible_task, completed_task]
         )
         await session.flush()
+        session.add_all(
+            [
+                TaskMember(
+                    task_id=accessible_task.id,
+                    user_id=user.id,
+                    role=TaskRole.OWNER,
+                ),
+                TaskMember(
+                    task_id=overdue_task.id,
+                    user_id=user.id,
+                    role=TaskRole.OWNER,
+                ),
+                TaskMember(
+                    task_id=inaccessible_task.id,
+                    user_id=other_user.id,
+                    role=TaskRole.OWNER,
+                ),
+                TaskMember(
+                    task_id=completed_task.id,
+                    user_id=user.id,
+                    role=TaskRole.OWNER,
+                ),
+            ]
+        )
 
         own_notification = Notification(
             user_id=user.id,
@@ -257,6 +285,110 @@ async def test_upcoming_and_overdue_tasks_respect_access_and_status(
     assert [item["id"] for item in upcoming.json()] == [str(context.accessible_task.id)]
     assert overdue.status_code == 200
     assert [item["id"] for item in overdue.json()] == [str(context.overdue_task.id)]
+
+
+async def test_deadline_check_notifies_owners_and_deduplicates_unread(
+    deadline_notification_context: DeadlineNotificationContext,
+) -> None:
+    context = deadline_notification_context
+    async with context.session_factory() as session:
+        service = DeadlineService()
+        await service.create_task_deadline_notifications(session, due_soon_hours=4)
+        await service.create_task_deadline_notifications(session, due_soon_hours=4)
+
+    async with context.session_factory() as session:
+        result = await session.execute(
+            select(Notification).where(
+                Notification.user_id == context.user.id,
+                Notification.related_task_id.in_(
+                    [context.accessible_task.id, context.overdue_task.id]
+                ),
+            )
+        )
+        reminders = list(result.scalars().all())
+        assert len(reminders) == 2
+        assert {(item.related_task_id, item.type) for item in reminders} == {
+            (context.accessible_task.id, NotificationType.TASK_DUE_SOON),
+            (context.overdue_task.id, NotificationType.TASK_OVERDUE),
+        }
+
+
+async def test_deadline_check_does_not_notify_non_owners_or_completed_tasks(
+    deadline_notification_context: DeadlineNotificationContext,
+) -> None:
+    context = deadline_notification_context
+    async with context.session_factory() as session:
+        await DeadlineService().create_task_deadline_notifications(
+            session, due_soon_hours=4
+        )
+
+    async with context.session_factory() as session:
+        result = await session.execute(select(Notification))
+        reminders = [
+            item
+            for item in result.scalars().all()
+            if item.type in {
+                NotificationType.TASK_DUE_SOON,
+                NotificationType.TASK_OVERDUE,
+            }
+        ]
+        assert all(
+            item.user_id
+            == (
+                context.other_user.id
+                if item.related_task_id == context.inaccessible_task.id
+                else context.user.id
+            )
+            for item in reminders
+        )
+        assert {item.related_task_id for item in reminders} == {
+            context.accessible_task.id,
+            context.overdue_task.id,
+            context.inaccessible_task.id,
+        }
+
+
+@pytest.mark.parametrize(
+    ("status", "due_delta"),
+    [
+        (TaskStatus.DONE, timedelta(hours=1)),
+        (TaskStatus.CANCELLED, timedelta(hours=1)),
+        (TaskStatus.CANCELLED, timedelta(hours=-1)),
+    ],
+)
+async def test_deadline_check_ignores_non_remindable_task_statuses(
+    deadline_notification_context: DeadlineNotificationContext,
+    status: TaskStatus,
+    due_delta: timedelta,
+) -> None:
+    context = deadline_notification_context
+    async with context.session_factory() as session:
+        task = Task(
+            project_id=context.accessible_task.project_id,
+            title=f"Ignored {status.value} task",
+            status=status,
+            due_at=datetime.now(UTC) + due_delta,
+            completed_at=datetime.now(UTC) if status is TaskStatus.DONE else None,
+            created_by_id=context.user.id,
+        )
+        session.add(task)
+        await session.flush()
+        session.add(
+            TaskMember(task_id=task.id, user_id=context.user.id, role=TaskRole.OWNER)
+        )
+        await session.commit()
+        task_id = task.id
+
+    async with context.session_factory() as session:
+        await DeadlineService().create_task_deadline_notifications(
+            session, due_soon_hours=4
+        )
+
+    async with context.session_factory() as session:
+        result = await session.execute(
+            select(Notification).where(Notification.related_task_id == task_id)
+        )
+        assert result.scalars().all() == []
 
 
 async def test_deadline_and_notification_endpoints_require_jwt(

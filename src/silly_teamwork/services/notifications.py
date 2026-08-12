@@ -30,6 +30,7 @@ class NotificationService:
         *,
         related_task_id: UUID | None = None,
         related_project_id: UUID | None = None,
+        commit: bool = True,
     ) -> Notification:
         user = await users.get_by_id(session, user_id)
         if user is None:
@@ -42,20 +43,40 @@ class NotificationService:
         if related_project_id is not None:
             await self.access.require_project_access(session, user, related_project_id)
 
+        normalized_title = title.strip()
+        normalized_content = content.strip()
+        is_task_deadline_reminder = notification_type in {
+            NotificationType.TASK_DUE_SOON,
+            NotificationType.TASK_OVERDUE,
+        }
+        existing = await notifications.find_matching_unread(
+            session,
+            user_id=user_id,
+            notification_type=notification_type,
+            title=None if is_task_deadline_reminder else normalized_title,
+            content=None if is_task_deadline_reminder else normalized_content,
+            related_task_id=related_task_id,
+            related_project_id=related_project_id,
+        )
+        if existing is not None:
+            return existing
+
         notification = Notification(
             user_id=user_id,
             type=notification_type,
-            title=title.strip(),
-            content=content.strip(),
+            title=normalized_title,
+            content=normalized_content,
             related_task_id=related_task_id,
             related_project_id=related_project_id,
         )
         try:
             notifications.add(session, notification)
             await session.flush()
-            await session.commit()
+            if commit:
+                await session.commit()
         except Exception:
-            await session.rollback()
+            if commit:
+                await session.rollback()
             raise
         return notification
 
