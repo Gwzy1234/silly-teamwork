@@ -12,7 +12,9 @@ from silly_teamwork.models.user import User
 from silly_teamwork.repositories import system_admins, users
 from silly_teamwork.services.admin import AdminService, get_admin_service
 from silly_teamwork.services.auth import AuthService, get_auth_service
+from silly_teamwork.services.deadlines import DeadlineService, get_deadline_service
 from silly_teamwork.services.files import FileService, get_file_service
+from silly_teamwork.services.notifications import NotificationService, get_notification_service
 from silly_teamwork.services.projects import ProjectService, get_project_service
 from silly_teamwork.services.tasks import TaskService, get_task_service
 from silly_teamwork.services.teams import TeamService, get_team_service
@@ -24,6 +26,8 @@ AdminServiceDep = Annotated[AdminService, Depends(get_admin_service)]
 ProjectServiceDep = Annotated[ProjectService, Depends(get_project_service)]
 TaskServiceDep = Annotated[TaskService, Depends(get_task_service)]
 FileServiceDep = Annotated[FileService, Depends(get_file_service)]
+NotificationServiceDep = Annotated[NotificationService, Depends(get_notification_service)]
+DeadlineServiceDep = Annotated[DeadlineService, Depends(get_deadline_service)]
 
 bearer_scheme = HTTPBearer(
     auto_error=False,

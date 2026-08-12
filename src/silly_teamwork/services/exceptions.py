@@ -96,3 +96,15 @@ class FileTooLargeError(FileServiceError):
 
 class FileStorageError(FileServiceError):
     pass
+
+
+class NotificationError(Exception):
+    """Base class for expected notification use-case failures."""
+
+
+class NotificationNotFoundError(NotificationError):
+    pass
+
+
+class InvalidNotificationError(NotificationError):
+    pass

@@ -2,6 +2,7 @@
 
 from silly_teamwork.models.enums import (
     InvitationStatus,
+    NotificationType,
     ProjectRole,
     ProjectStatus,
     SystemAdminRole,
@@ -12,6 +13,7 @@ from silly_teamwork.models.enums import (
 )
 from silly_teamwork.models.file import File
 from silly_teamwork.models.invitation_code import InvitationCode
+from silly_teamwork.models.notification import Notification
 from silly_teamwork.models.project import Project
 from silly_teamwork.models.project_member import ProjectMember
 from silly_teamwork.models.system_admin import SystemAdmin
@@ -25,6 +27,8 @@ __all__ = [
     "File",
     "InvitationCode",
     "InvitationStatus",
+    "Notification",
+    "NotificationType",
     "Project",
     "ProjectMember",
     "ProjectRole",

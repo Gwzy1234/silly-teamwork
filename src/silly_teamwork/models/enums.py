@@ -49,3 +49,10 @@ class InvitationStatus(StrEnum):
 
 class SystemAdminRole(StrEnum):
     SUPER_ADMIN = "super_admin"
+
+
+class NotificationType(StrEnum):
+    TASK_DUE_SOON = "task_due_soon"
+    TASK_OVERDUE = "task_overdue"
+    PROJECT_DUE_SOON = "project_due_soon"
+    SYSTEM = "system"

@@ -10,6 +10,7 @@ from silly_teamwork.db.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
 if TYPE_CHECKING:
     from silly_teamwork.models.file import File
     from silly_teamwork.models.invitation_code import InvitationCode
+    from silly_teamwork.models.notification import Notification
     from silly_teamwork.models.project import Project
     from silly_teamwork.models.project_member import ProjectMember
     from silly_teamwork.models.system_admin import SystemAdmin
@@ -70,6 +71,9 @@ class User(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         cascade="all, delete-orphan",
         passive_deletes=True,
         uselist=False,
+    )
+    notifications: Mapped[list[Notification]] = relationship(
+        back_populates="user", cascade="all, delete-orphan", passive_deletes=True
     )
 
     @property

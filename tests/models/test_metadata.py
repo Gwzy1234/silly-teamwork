@@ -10,6 +10,7 @@ def test_all_expected_tables_are_registered() -> None:
     assert set(Base.metadata.tables) == {
         "files",
         "invitation_codes",
+        "notifications",
         "project_members",
         "projects",
         "system_admins",
@@ -43,8 +44,26 @@ def test_every_business_table_has_standard_audit_columns() -> None:
         if table_name == "system_admins":
             assert {"id", "user_id", "role", "created_at"} == set(table.columns.keys())
             continue
+        if table_name == "notifications":
+            assert {"id", "created_at", "read_at"}.issubset(table.columns.keys())
+            continue
         assert {"id", "created_at", "updated_at"}.issubset(table.columns.keys())
 
 
 def test_user_email_is_optional() -> None:
     assert Base.metadata.tables["users"].c.email.nullable is True
+
+
+def test_notification_indexes_and_history_preserving_foreign_keys() -> None:
+    table = Base.metadata.tables["notifications"]
+    indexed_columns = {
+        tuple(column.name for column in index.columns) for index in table.indexes
+    }
+    assert {("user_id",), ("is_read",), ("created_at",)}.issubset(indexed_columns)
+
+    ondelete_by_column = {
+        next(iter(constraint.columns)).name: constraint.ondelete
+        for constraint in table.foreign_key_constraints
+    }
+    assert ondelete_by_column["related_task_id"] == "SET NULL"
+    assert ondelete_by_column["related_project_id"] == "SET NULL"

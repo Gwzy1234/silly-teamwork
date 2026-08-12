@@ -12,6 +12,7 @@ from silly_teamwork.models.enums import ProjectStatus
 
 if TYPE_CHECKING:
     from silly_teamwork.models.file import File
+    from silly_teamwork.models.notification import Notification
     from silly_teamwork.models.project_member import ProjectMember
     from silly_teamwork.models.task import Task
     from silly_teamwork.models.team import Team
@@ -62,6 +63,9 @@ class Project(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     )
     files: Mapped[list[File]] = relationship(
         back_populates="project", cascade="all, delete-orphan", passive_deletes=True
+    )
+    notifications: Mapped[list[Notification]] = relationship(
+        back_populates="related_project", passive_deletes=True
     )
 
     @property

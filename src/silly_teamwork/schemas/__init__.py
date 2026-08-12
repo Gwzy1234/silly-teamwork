@@ -8,6 +8,10 @@ from silly_teamwork.schemas.admin import (
 )
 from silly_teamwork.schemas.auth import LoginRequest, RegisterRequest, TokenResponse
 from silly_teamwork.schemas.file import FileMetadataUpdate, FileResponse
+from silly_teamwork.schemas.notification import (
+    MarkAllNotificationsReadResponse,
+    NotificationResponse,
+)
 from silly_teamwork.schemas.project import (
     ProjectCreate,
     ProjectMemberAdd,
@@ -50,6 +54,8 @@ __all__ = [
     "InvitationCreateRequest",
     "InvitationRole",
     "LoginRequest",
+    "MarkAllNotificationsReadResponse",
+    "NotificationResponse",
     "ProjectCreate",
     "ProjectMemberAdd",
     "ProjectMemberResponse",
