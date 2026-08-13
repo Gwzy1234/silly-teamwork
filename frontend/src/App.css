@@ -117,12 +117,40 @@
   justify-content: flex-end;
   padding: 0 28px;
   border-bottom: 1px solid #edf0f5;
-  background: rgba(255, 255, 255, 0.92);
+  background: #fff;
+  box-shadow: 0 4px 16px rgba(32, 62, 105, 0.05);
   backdrop-filter: blur(10px);
+}
+
+.app-header .ant-btn,
+.app-header .ant-typography {
+  color: #334155;
+}
+
+.app-header .ant-btn:hover {
+  color: #1677ff !important;
+  background: #f0f6ff !important;
 }
 
 .sidebar-toggle {
   margin-right: auto;
+}
+
+.mobile-menu-toggle,
+.mobile-header-title {
+  display: none;
+}
+
+.team-navigation-label {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.app-sider .ant-menu-item-group-title,
+.mobile-navigation-drawer .ant-menu-item-group-title {
+  font-weight: 600;
 }
 
 .app-content {
@@ -142,6 +170,56 @@
 .team-card {
   border: 1px solid #edf0f5;
   border-radius: 16px;
+}
+
+.metric-card-link {
+  display: block;
+  height: 100%;
+  color: inherit;
+  text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.metric-card-interactive {
+  height: 100%;
+  cursor: pointer;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    transform 0.2s ease;
+}
+
+.metric-card-arrow {
+  color: #94a3b8;
+  transition: transform 0.2s ease;
+}
+
+.metric-card-link:hover .metric-card-interactive,
+.metric-card-link:focus-visible .metric-card-interactive {
+  border-color: #91caff;
+  box-shadow: 0 10px 28px rgba(22, 119, 255, 0.12);
+  transform: translateY(-2px);
+}
+
+.metric-card-link:hover .metric-card-arrow,
+.metric-card-link:focus-visible .metric-card-arrow {
+  color: #1677ff;
+  transform: translateX(2px);
+}
+
+.metric-card-link:focus-visible {
+  border-radius: 16px;
+  outline: 3px solid rgba(22, 119, 255, 0.24);
+  outline-offset: 2px;
+}
+
+.metric-card-link:active .metric-card-interactive {
+  box-shadow: 0 4px 14px rgba(22, 119, 255, 0.1);
+  transform: scale(0.985);
+}
+
+.dashboard-section-anchor {
+  scroll-margin-top: 20px;
 }
 
 .metric-icon {
@@ -229,8 +307,14 @@
 }
 
 .theme-dark .app-header {
-  border-bottom-color: #303640;
-  background: rgba(20, 25, 34, 0.94);
+  border-bottom-color: #e2e8f0;
+  background: #fff;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.16);
+}
+
+.theme-dark .app-header .ant-btn,
+.theme-dark .app-header .ant-typography {
+  color: #334155;
 }
 
 .theme-dark .app-sider {
@@ -265,11 +349,85 @@
 }
 
 @media (max-width: 720px) {
+  .auth-shell {
+    height: 100dvh;
+    min-height: 100dvh;
+    place-items: start center;
+    overflow-x: hidden;
+    overflow-y: auto;
+    padding: 24px 16px;
+  }
+
+  .auth-content {
+    padding-bottom: max(24px, env(safe-area-inset-bottom));
+  }
+
   .app-sider {
     display: none;
   }
 
+  .app-layout > .ant-layout {
+    min-width: 0;
+  }
+
+  .app-header {
+    height: 60px;
+    min-width: 0;
+    padding: 0 max(8px, env(safe-area-inset-right)) 0 max(8px, env(safe-area-inset-left));
+  }
+
+  .desktop-sidebar-toggle {
+    display: none;
+  }
+
+  .mobile-menu-toggle {
+    display: inline-flex;
+    flex: 0 0 auto;
+  }
+
+  .mobile-header-title {
+    display: block;
+    min-width: 0;
+    margin-right: auto;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .app-header-action,
+  .app-user-menu,
+  .mobile-menu-toggle {
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    touch-action: manipulation;
+  }
+
+  .app-user-name {
+    display: none;
+  }
+
+  .app-user-menu .ant-space {
+    gap: 0 !important;
+  }
+
   .app-content {
-    padding: 20px;
+    min-width: 0;
+    padding: 20px max(16px, env(safe-area-inset-right)) max(20px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+    overflow-x: hidden;
+  }
+
+  .mobile-navigation-drawer .ant-drawer-body {
+    padding: 0;
+  }
+
+  .mobile-drawer-brand {
+    padding-top: env(safe-area-inset-top);
+  }
+
+  .mobile-navigation-drawer .ant-menu-item {
+    min-height: 48px;
+    line-height: 48px;
+    touch-action: manipulation;
   }
 }

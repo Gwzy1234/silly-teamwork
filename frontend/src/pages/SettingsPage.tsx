@@ -12,7 +12,6 @@ import {
 import {
   Alert,
   App,
-  Avatar,
   Button,
   Card,
   Descriptions,
@@ -75,13 +74,6 @@ export function SettingsPage() {
 
       <Card className="content-card" title="账号信息">
         <Flex vertical gap={24}>
-          <Space size={16}>
-            <Avatar size={64} icon={<UserOutlined />} />
-            <div>
-              <Typography.Title level={4} style={{ margin: 0 }}>{user.nickname || user.username}</Typography.Title>
-              <Typography.Text type="secondary">@{user.username}</Typography.Text>
-            </div>
-          </Space>
           <Descriptions column={{ xs: 1, md: 2 }}>
             <Descriptions.Item label="用户名"><UserOutlined /> {user.username}</Descriptions.Item>
             <Descriptions.Item label="昵称">{user.nickname || '未设置'}</Descriptions.Item>

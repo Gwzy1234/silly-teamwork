@@ -8,27 +8,48 @@ import {
   TeamOutlined,
   UserOutlined,
 } from '@ant-design/icons'
-import { Avatar, Badge, Button, Dropdown, Layout, Menu, Space, Typography } from 'antd'
+import { Avatar, Badge, Button, Drawer, Dropdown, Layout, Menu, Space, Typography } from 'antd'
+import type { MenuProps } from 'antd'
+import { useState } from 'react'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
+import '../App.css'
 import { useCurrentUser, logout } from '../features/auth/hooks'
 import { useNotifications } from '../features/notifications/hooks'
 import { usePreferencesStore } from '../features/settings/store'
+import { useTeams } from '../features/teams/hooks'
 
 const { Header, Content, Sider } = Layout
 
 export function AppLayout() {
   const navigate = useNavigate()
   const location = useLocation()
+  const [mobileNavigationOpen, setMobileNavigationOpen] = useState(false)
   const currentUser = useCurrentUser().data
   const notifications = useNotifications()
+  const teams = useTeams()
   const unreadCount = notifications.data?.filter((item) => !item.is_read).length ?? 0
   const sidebarCollapsed = usePreferencesStore((state) => state.sidebarCollapsed)
   const toggleSidebar = usePreferencesStore((state) => state.toggleSidebar)
   const theme = usePreferencesStore((state) => state.theme)
 
-  const navigationItems = [
+  const teamNavigationItems: MenuProps['items'] = teams.isPending
+    ? [{ key: 'teams-loading', label: '正在加载团队…', disabled: true }]
+    : teams.data?.length
+      ? teams.data.map((team) => ({
+          key: `/teams/${team.id}`,
+          icon: <TeamOutlined />,
+          label: <span className="team-navigation-label">{team.name}</span>,
+        }))
+      : [{ key: 'teams-empty', label: '暂无团队', disabled: true }]
+
+  const navigationItems: MenuProps['items'] = [
     { key: '/dashboard', icon: <DashboardOutlined />, label: '概览' },
-    { key: '/teams', icon: <TeamOutlined />, label: '我的团队' },
+    {
+      type: 'group',
+      key: 'team-navigation-group',
+      label: '我的团队',
+      children: teamNavigationItems,
+    },
     {
       key: '/notifications',
       icon: <BellOutlined />,
@@ -36,6 +57,12 @@ export function AppLayout() {
     },
     { key: '/settings', icon: <SettingOutlined />, label: '用户设置' },
   ]
+  const selectedNavigationKey = location.pathname
+
+  const navigateFromMobileMenu = (key: string) => {
+    setMobileNavigationOpen(false)
+    navigate(key)
+  }
 
   return (
     <Layout className="app-layout">
@@ -54,9 +81,7 @@ export function AppLayout() {
         </div>
         <Menu
           mode="inline"
-          selectedKeys={[
-            location.pathname.startsWith('/teams') ? '/teams' : location.pathname,
-          ]}
+          selectedKeys={[selectedNavigationKey]}
           items={navigationItems}
           onClick={({ key }) => navigate(key)}
         />
@@ -65,13 +90,24 @@ export function AppLayout() {
         <Header className="app-header">
           <Button
             type="text"
-            className="sidebar-toggle"
+            className="sidebar-toggle desktop-sidebar-toggle"
             aria-label={sidebarCollapsed ? '展开侧边栏' : '折叠侧边栏'}
             icon={sidebarCollapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
             onClick={toggleSidebar}
           />
           <Button
             type="text"
+            className="mobile-menu-toggle"
+            aria-label="打开导航菜单"
+            icon={<MenuUnfoldOutlined />}
+            onClick={() => setMobileNavigationOpen(true)}
+          />
+          <Typography.Text className="mobile-header-title" strong>
+            Silly Teamwork
+          </Typography.Text>
+          <Button
+            type="text"
+            className="app-header-action"
             aria-label="通知中心"
             icon={<Badge count={unreadCount} size="small"><BellOutlined /></Badge>}
             onClick={() => navigate('/notifications')}
@@ -92,10 +128,10 @@ export function AppLayout() {
               ],
             }}
           >
-            <Button type="text">
+            <Button type="text" className="app-user-menu" aria-label="用户菜单">
               <Space>
                 <Avatar size="small" icon={<UserOutlined />} />
-                <Typography.Text strong>
+                <Typography.Text strong className="app-user-name">
                   {currentUser?.nickname || currentUser?.username}
                 </Typography.Text>
               </Space>
@@ -106,6 +142,28 @@ export function AppLayout() {
           <Outlet />
         </Content>
       </Layout>
+      <Drawer
+        className="mobile-navigation-drawer"
+        placement="left"
+        width={280}
+        open={mobileNavigationOpen}
+        onClose={() => setMobileNavigationOpen(false)}
+        closable={false}
+        title={null}
+      >
+        <div className="app-brand mobile-drawer-brand">
+          <span className="app-logo">
+            <TeamOutlined />
+          </span>
+          <span>Silly Teamwork</span>
+        </div>
+        <Menu
+          mode="inline"
+          selectedKeys={[selectedNavigationKey]}
+          items={navigationItems}
+          onClick={({ key }) => navigateFromMobileMenu(key)}
+        />
+      </Drawer>
     </Layout>
   )
 }
