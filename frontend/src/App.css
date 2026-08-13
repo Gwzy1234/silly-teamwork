@@ -277,6 +277,78 @@
   background: #eaf3ff;
 }
 
+.file-pool-search-card .ant-card-body {
+  padding: 18px;
+}
+
+.file-pool-projects {
+  border: 1px solid #e5eaf1;
+  border-radius: 16px;
+  overflow: hidden;
+  background: #fff;
+}
+
+.file-pool-projects > .ant-collapse-item > .ant-collapse-header {
+  min-height: 64px;
+  align-items: center !important;
+  padding: 14px 20px !important;
+}
+
+.file-pool-projects > .ant-collapse-item > .ant-collapse-content > .ant-collapse-content-box {
+  padding: 4px 20px 20px;
+}
+
+.file-pool-project-label {
+  width: 100%;
+  min-width: 0;
+}
+
+.file-pool-project-icon {
+  color: #1677ff;
+  font-size: 20px;
+}
+
+.file-pool-sections > .ant-collapse-item {
+  border: 1px solid #edf0f5;
+  border-radius: 12px !important;
+  margin-bottom: 10px;
+  overflow: hidden;
+  background: #fafcff;
+}
+
+.file-pool-sections > .ant-collapse-item > .ant-collapse-header {
+  min-height: 52px;
+  align-items: center !important;
+}
+
+.file-pool-sections > .ant-collapse-item > .ant-collapse-content > .ant-collapse-content-box {
+  padding: 0 16px 8px;
+}
+
+.file-pool-list-item {
+  min-width: 0;
+  padding: 14px 0 !important;
+}
+
+.file-pool-list-item .ant-list-item-meta {
+  min-width: 0;
+}
+
+.file-pool-file-icon {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  border-radius: 11px;
+  color: #1677ff;
+  font-size: 21px;
+  background: #eaf3ff;
+}
+
+.file-pool-download {
+  min-height: 40px;
+}
+
 .notification-item {
   padding: 18px 16px !important;
   border-radius: 12px;
@@ -479,5 +551,52 @@
   .settings-password-form .ant-btn-primary,
   .settings-profile-content .ant-btn-primary {
     min-height: 44px;
+  }
+
+  .file-pool-search-card .ant-card-body {
+    padding: 14px;
+  }
+
+  .file-pool-projects > .ant-collapse-item > .ant-collapse-header {
+    min-height: 56px;
+    padding: 12px !important;
+  }
+
+  .file-pool-projects > .ant-collapse-item > .ant-collapse-content > .ant-collapse-content-box {
+    padding: 4px 10px 12px;
+  }
+
+  .file-pool-project-label > .ant-space:last-child .ant-tag {
+    display: none;
+  }
+
+  .file-pool-sections > .ant-collapse-item > .ant-collapse-header {
+    min-height: 48px;
+    padding: 10px 12px !important;
+  }
+
+  .file-pool-sections > .ant-collapse-item > .ant-collapse-content > .ant-collapse-content-box {
+    padding: 0 12px 6px;
+  }
+
+  .file-pool-list-item {
+    align-items: flex-start !important;
+    gap: 8px;
+    padding: 14px 0 !important;
+  }
+
+  .file-pool-list-item .ant-list-item-action {
+    margin-inline-start: 6px;
+  }
+
+  .file-pool-download {
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    font-size: 0;
+  }
+
+  .file-pool-download .anticon {
+    font-size: 18px;
   }
 }

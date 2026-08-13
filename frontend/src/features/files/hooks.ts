@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   deleteFile,
   downloadFile,
+  listFileIndex,
   listProjectFiles,
   listTaskFiles,
   updateFileMetadata,
@@ -11,8 +12,16 @@ import {
 import type { FileScope } from './types'
 
 export const fileQueryKeys = {
+  index: (query: string) => ['files', 'index', { query }] as const,
   project: (projectId: string) => ['projects', projectId, 'files'] as const,
   task: (taskId: string) => ['tasks', taskId, 'files'] as const,
+}
+
+export function useFileIndex(query: string) {
+  return useQuery({
+    queryKey: fileQueryKeys.index(query),
+    queryFn: () => listFileIndex(query || undefined),
+  })
 }
 
 function scopeQueryKey(scope: FileScope, ownerId: string) {

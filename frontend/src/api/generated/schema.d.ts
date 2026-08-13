@@ -418,6 +418,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/projects/{project_id}/file-index": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List project shared files and task attachments */
+        get: operations["get_project_file_index_api_v1_projects__project_id__file_index_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/projects/{project_id}/files": {
         parameters: {
             query?: never;
@@ -587,6 +604,23 @@ export interface paths {
         put?: never;
         /** Upload a task file */
         post: operations["upload_task_file_api_v1_tasks__task_id__files_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/files/index": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List all files accessible to the current user */
+        get: operations["list_file_index_api_v1_files_index_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -767,6 +801,89 @@ export interface components {
              */
             file: string;
         };
+        /** FileIndexItemResponse */
+        FileIndexItemResponse: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Project Id */
+            project_id: string | null;
+            /** Task Id */
+            task_id: string | null;
+            /** Uploaded By Id */
+            uploaded_by_id: string | null;
+            /** Original Name */
+            original_name: string;
+            /** Content Type */
+            content_type: string;
+            /** Size Bytes */
+            size_bytes: number;
+            /** Checksum Sha256 */
+            checksum_sha256: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /**
+             * Uploaded At
+             * Format: date-time
+             */
+            uploaded_at: string;
+            team: components["schemas"]["FileIndexTeamResponse"];
+            project: components["schemas"]["FileIndexProjectResponse"];
+            task: components["schemas"]["FileIndexTaskResponse"] | null;
+            uploader: components["schemas"]["FileIndexUploaderResponse"] | null;
+        };
+        /** FileIndexProjectResponse */
+        FileIndexProjectResponse: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+        };
+        /** FileIndexTaskResponse */
+        FileIndexTaskResponse: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Title */
+            title: string;
+        };
+        /** FileIndexTeamResponse */
+        FileIndexTeamResponse: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+        };
+        /** FileIndexUploaderResponse */
+        FileIndexUploaderResponse: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Username */
+            username: string;
+            /** Nickname */
+            nickname: string | null;
+        };
         /** FileMetadataUpdate */
         FileMetadataUpdate: {
             /** Original Name */
@@ -909,6 +1026,20 @@ export interface components {
             due_at?: string | null;
             /** Owner User Id */
             owner_user_id?: string | null;
+        };
+        /** ProjectFileIndexResponse */
+        ProjectFileIndexResponse: {
+            project: components["schemas"]["FileIndexProjectResponse"];
+            /** Shared Files */
+            shared_files: components["schemas"]["FileIndexItemResponse"][];
+            /** Tasks */
+            tasks: components["schemas"]["ProjectFileTaskGroupResponse"][];
+        };
+        /** ProjectFileTaskGroupResponse */
+        ProjectFileTaskGroupResponse: {
+            task: components["schemas"]["FileIndexTaskResponse"];
+            /** Files */
+            files: components["schemas"]["FileIndexItemResponse"][];
         };
         /** ProjectMemberAdd */
         ProjectMemberAdd: {
@@ -2512,6 +2643,46 @@ export interface operations {
             };
         };
     };
+    get_project_file_index_api_v1_projects__project_id__file_index_get: {
+        parameters: {
+            query?: {
+                q?: string | null;
+            };
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectFileIndexResponse"];
+                };
+            };
+            /** @description Project not found or not accessible */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_project_files_api_v1_projects__project_id__files_get: {
         parameters: {
             query?: never;
@@ -3149,6 +3320,40 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_file_index_api_v1_files_index_get: {
+        parameters: {
+            query?: {
+                q?: string | null;
+                team_id?: string | null;
+                project_id?: string | null;
+                task_id?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FileIndexItemResponse"][];
+                };
             };
             /** @description Validation Error */
             422: {

@@ -4,6 +4,7 @@ import { ProtectedRoute } from '../features/auth/components/ProtectedRoute'
 import { AppLayout } from '../layouts/AppLayout'
 import { AuthLayout } from '../layouts/AuthLayout'
 import { DashboardPage } from '../pages/DashboardPage'
+import { FilePoolPage } from '../pages/FilePoolPage'
 import { LoginPage } from '../pages/LoginPage'
 import { NotFoundPage } from '../pages/NotFoundPage'
 import { NotificationsPage } from '../pages/NotificationsPage'
@@ -36,6 +37,7 @@ export const router = createBrowserRouter([
         children: [
           { index: true, element: <Navigate to="/dashboard" replace /> },
           { path: '/dashboard', element: <DashboardPage /> },
+          { path: '/files', element: <FilePoolPage /> },
           { path: '/notifications', element: <NotificationsPage /> },
           { path: '/settings', element: <SettingsPage /> },
           { path: '/teams', element: <TeamsPage /> },

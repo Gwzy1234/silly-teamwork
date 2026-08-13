@@ -1,6 +1,7 @@
 import {
   BellOutlined,
   DashboardOutlined,
+  FolderOpenOutlined,
   LogoutOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
@@ -49,6 +50,7 @@ export function AppLayout() {
 
   const navigationItems: MenuProps['items'] = [
     { key: '/dashboard', icon: <DashboardOutlined />, label: '概览' },
+    { key: '/files', icon: <FolderOpenOutlined />, label: '文件池' },
     {
       type: 'group',
       key: 'team-navigation-group',
