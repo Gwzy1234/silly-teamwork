@@ -33,7 +33,7 @@ async def register(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(error)) from error
     except RegistrationConflictError as error:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(error)) from error
-    return UserResponse.model_validate(user)
+    return UserResponse.from_user(user)
 
 
 @router.post(

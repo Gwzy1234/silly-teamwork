@@ -41,7 +41,7 @@ from silly_teamwork.schemas.team import (
     TeamResponse,
     TeamRoleResponse,
 )
-from silly_teamwork.schemas.user import UserResponse
+from silly_teamwork.schemas.user import PasswordChangeRequest, UserProfileUpdate, UserResponse
 
 __all__ = [
     "AdminActionResponse",
@@ -63,6 +63,7 @@ __all__ = [
     "ProjectResponse",
     "ProjectStatusUpdate",
     "ProjectUpdate",
+    "PasswordChangeRequest",
     "RegisterRequest",
     "TeamCreateRequest",
     "TeamDetailResponse",
@@ -79,4 +80,5 @@ __all__ = [
     "TaskUpdate",
     "TokenResponse",
     "UserResponse",
+    "UserProfileUpdate",
 ]

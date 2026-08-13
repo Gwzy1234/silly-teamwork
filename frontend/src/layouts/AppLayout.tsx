@@ -13,6 +13,7 @@ import type { MenuProps } from 'antd'
 import { useState } from 'react'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import '../App.css'
+import { resolveApiUrl } from '../api/client'
 import { useCurrentUser, logout } from '../features/auth/hooks'
 import { useNotifications } from '../features/notifications/hooks'
 import { usePreferencesStore } from '../features/settings/store'
@@ -31,6 +32,10 @@ export function AppLayout() {
   const sidebarCollapsed = usePreferencesStore((state) => state.sidebarCollapsed)
   const toggleSidebar = usePreferencesStore((state) => state.toggleSidebar)
   const theme = usePreferencesStore((state) => state.theme)
+  const avatarUrl = resolveApiUrl(currentUser?.avatar_url)
+  const versionedAvatarUrl = avatarUrl && currentUser
+    ? `${avatarUrl}${avatarUrl.includes('?') ? '&' : '?'}v=${encodeURIComponent(currentUser.updated_at)}`
+    : undefined
 
   const teamNavigationItems: MenuProps['items'] = teams.isPending
     ? [{ key: 'teams-loading', label: '正在加载团队…', disabled: true }]
@@ -130,7 +135,7 @@ export function AppLayout() {
           >
             <Button type="text" className="app-user-menu" aria-label="用户菜单">
               <Space>
-                <Avatar size="small" icon={<UserOutlined />} />
+                <Avatar size="small" src={versionedAvatarUrl} icon={<UserOutlined />} />
                 <Typography.Text strong className="app-user-name">
                   {currentUser?.nickname || currentUser?.username}
                 </Typography.Text>

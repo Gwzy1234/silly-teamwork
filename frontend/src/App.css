@@ -301,6 +301,34 @@
   font-size: 20px;
 }
 
+.settings-profile-layout {
+  display: grid;
+  grid-template-columns: 190px minmax(0, 1fr);
+  gap: 32px;
+}
+
+.settings-avatar-panel {
+  padding: 8px 0;
+  text-align: center;
+}
+
+.settings-avatar-actions {
+  justify-content: center;
+}
+
+.settings-avatar-hint {
+  max-width: 180px;
+  font-size: 12px;
+}
+
+.settings-profile-content {
+  min-width: 0;
+}
+
+.settings-password-form {
+  max-width: 620px;
+}
+
 .theme-dark .app-layout,
 .theme-dark .app-content {
   background: #10141c;
@@ -429,5 +457,27 @@
     min-height: 48px;
     line-height: 48px;
     touch-action: manipulation;
+  }
+
+  .settings-profile-layout {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 24px;
+  }
+
+  .settings-avatar-panel {
+    padding-top: 0;
+  }
+
+  .settings-avatar-actions {
+    width: 100%;
+  }
+
+  .settings-avatar-actions .ant-btn {
+    min-height: 44px;
+  }
+
+  .settings-password-form .ant-btn-primary,
+  .settings-profile-content .ant-btn-primary {
+    min-height: 44px;
   }
 }

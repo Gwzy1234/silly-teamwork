@@ -1,6 +1,14 @@
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { queryClient } from '../../app/query-client'
-import { getCurrentUser, login, register } from './api'
+import {
+  changePassword,
+  deleteAvatar,
+  getCurrentUser,
+  login,
+  register,
+  updateCurrentUser,
+  uploadAvatar,
+} from './api'
 import { clearAuthSession, useAuthStore } from './store'
 import type { User } from './types'
 
@@ -40,6 +48,36 @@ export function useLogin() {
 
 export function useRegister() {
   return useMutation({ mutationFn: register })
+}
+
+export function useUpdateCurrentUser() {
+  return useMutation({
+    mutationFn: updateCurrentUser,
+    onSuccess: setCurrentUser,
+  })
+}
+
+export function useChangePassword() {
+  return useMutation({ mutationFn: changePassword })
+}
+
+export function useUploadAvatar() {
+  return useMutation({
+    mutationFn: uploadAvatar,
+    onSuccess: setCurrentUser,
+  })
+}
+
+export function useDeleteAvatar() {
+  return useMutation({
+    mutationFn: deleteAvatar,
+    async onSuccess() {
+      queryClient.setQueryData<User>(authQueryKeys.currentUser, (currentUser) =>
+        currentUser ? { ...currentUser, avatar_url: null } : currentUser,
+      )
+      await queryClient.invalidateQueries({ queryKey: authQueryKeys.currentUser })
+    },
+  })
 }
 
 export function setCurrentUser(user: User) {

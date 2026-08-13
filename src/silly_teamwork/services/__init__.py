@@ -10,6 +10,7 @@ from silly_teamwork.services.projects import ProjectService
 from silly_teamwork.services.seed import DevelopmentSeedService
 from silly_teamwork.services.tasks import TaskService
 from silly_teamwork.services.teams import TeamService
+from silly_teamwork.services.users import UserService
 
 __all__ = [
     "AdminService",
@@ -22,4 +23,5 @@ __all__ = [
     "ProjectService",
     "TaskService",
     "TeamService",
+    "UserService",
 ]

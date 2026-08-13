@@ -108,3 +108,27 @@ class NotificationNotFoundError(NotificationError):
 
 class InvalidNotificationError(NotificationError):
     pass
+
+
+class UserProfileError(Exception):
+    """Base class for expected account profile failures."""
+
+
+class InvalidCurrentPasswordError(UserProfileError):
+    pass
+
+
+class PasswordReuseError(UserProfileError):
+    pass
+
+
+class AvatarNotFoundError(UserProfileError):
+    pass
+
+
+class InvalidAvatarError(UserProfileError):
+    pass
+
+
+class AvatarTooLargeError(UserProfileError):
+    pass

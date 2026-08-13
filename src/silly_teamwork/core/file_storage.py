@@ -35,6 +35,11 @@ class LocalFileStorage:
             original_name,
         )
 
+    def avatar_target(self, user_id: UUID, extension: str) -> StoredFileTarget:
+        """Return a private, randomized path for a user's avatar."""
+
+        return self._target(Path("users") / str(user_id) / "avatar", f"avatar{extension}")
+
     def resolve(self, storage_key: str) -> Path:
         candidate = (self.root / storage_key).resolve()
         if not candidate.is_relative_to(self.root):

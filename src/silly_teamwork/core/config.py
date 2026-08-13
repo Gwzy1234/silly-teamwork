@@ -35,6 +35,7 @@ class Settings(BaseSettings):
     allowed_origins: list[str] = Field(default_factory=list)
     upload_dir: Path = Path("uploads")
     max_file_size: int = Field(default=20 * 1024 * 1024, gt=0)
+    max_avatar_size: int = Field(default=5 * 1024 * 1024, gt=0)
     max_upload_size_mb: int = Field(default=20, gt=0)
 
     deadline_reminders_enabled: bool = True

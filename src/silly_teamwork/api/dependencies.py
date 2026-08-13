@@ -18,6 +18,7 @@ from silly_teamwork.services.notifications import NotificationService, get_notif
 from silly_teamwork.services.projects import ProjectService, get_project_service
 from silly_teamwork.services.tasks import TaskService, get_task_service
 from silly_teamwork.services.teams import TeamService, get_team_service
+from silly_teamwork.services.users import UserService, get_user_service
 
 DbSession = Annotated[AsyncSession, Depends(get_db_session)]
 AuthServiceDep = Annotated[AuthService, Depends(get_auth_service)]
@@ -28,6 +29,7 @@ TaskServiceDep = Annotated[TaskService, Depends(get_task_service)]
 FileServiceDep = Annotated[FileService, Depends(get_file_service)]
 NotificationServiceDep = Annotated[NotificationService, Depends(get_notification_service)]
 DeadlineServiceDep = Annotated[DeadlineService, Depends(get_deadline_service)]
+UserServiceDep = Annotated[UserService, Depends(get_user_service)]
 
 bearer_scheme = HTTPBearer(
     auto_error=False,
