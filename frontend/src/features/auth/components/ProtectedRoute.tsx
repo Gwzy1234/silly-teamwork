@@ -5,9 +5,17 @@ import { useAuthStore } from '../store'
 
 export function ProtectedRoute() {
   const location = useLocation()
+  const hasHydrated = useAuthStore((state) => state.hasHydrated)
   const sessionIsValid = useAuthStore((state) => state.hasValidSession())
   const currentUser = useCurrentUser()
 
+  if (!hasHydrated) {
+    return (
+      <div className="screen-center">
+        <Spin size="large" tip="正在恢复登录状态…" />
+      </div>
+    )
+  }
   if (!sessionIsValid) {
     return <Navigate to="/login" replace state={{ from: location }} />
   }

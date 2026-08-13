@@ -19,12 +19,13 @@ export const authQueryKeys = {
 export function useCurrentUser() {
   const accessToken = useAuthStore((state) => state.accessToken)
   const expiresAt = useAuthStore((state) => state.expiresAt)
+  const hasHydrated = useAuthStore((state) => state.hasHydrated)
   const sessionIsValid = Boolean(accessToken && expiresAt && expiresAt > Date.now())
 
   return useQuery({
     queryKey: authQueryKeys.currentUser,
     queryFn: () => getCurrentUser(),
-    enabled: sessionIsValid,
+    enabled: hasHydrated && sessionIsValid,
     retry: false,
     staleTime: 60_000,
   })

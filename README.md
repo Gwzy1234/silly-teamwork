@@ -1,9 +1,63 @@
-# Silly Teamwork Backend
+# Silly Teamwork
 
-Silly Teamwork 是面向大学课程小组的团队协作系统。当前后端已经具备项目骨架、数据库
-模型、邀请码注册、JWT 登录和当前用户查询；小组、项目、任务与文件 API 仍待实现。
+Silly Teamwork 是一个面向大学课程小组协作的任务管理系统。系统以 Team（小组）、
+Project（前端产品文案为“科目”）和 Task（任务）组织课程协作内容，支持：
 
-## 技术方案
+- 小组管理
+- 科目（Project）管理
+- 任务管理
+- 文件中心
+- 基于系统角色和协作关系的权限控制
+- 用户资料管理
+
+当前项目已经包含可运行的 FastAPI 后端、React 前端、数据库迁移、自动化测试和 Docker
+Compose 部署环境。
+
+## V1.1 新增功能
+
+### 文件中心
+
+V1.1 建立了统一、展开式的文件索引体验，包含：
+
+- 全局文件池：集中查看当前用户有权限访问的文件
+- 科目文件池：聚合科目共享文件及其任务附件
+- 任务附件索引：在任务详情中查看和搜索附件
+- 按文件名搜索
+- 按上传时间倒序展示
+- 由后端统一计算的文件查看、上传、修改和删除权限
+- 文件删除时的数据库事务、物理文件清理与失败恢复
+
+文件系统继续复用统一的 `File` 模型，通过 `project_id` 表示科目共享文件，通过
+`task_id` 表示任务附件；没有新增独立的文件索引表。
+
+### 资源生命周期管理
+
+V1.1 增加了任务、科目和小组的永久删除能力：
+
+- 删除任务
+- 删除科目
+- 删除小组
+
+Team leader 可以删除所属小组及其科目、任务，super_admin 可以执行全局资源删除；
+Project owner 还可以删除所属科目中的任务。普通成员和 Task owner 不会因此获得额外的
+永久删除权限。删除流程包含数据库事务、关联数据级联、物理文件清理以及失败恢复，避免
+数据库记录与本地文件系统不一致。科目的归档能力继续保留，与永久删除互不替代。
+
+### 用户功能
+
+- 用户可以维护昵称、头像和个人简介（bio）
+- 支持头像上传、读取和删除
+- 支持验证原密码后修改密码
+
+### UI/UX
+
+- 文件中心采用 Collapse、List、Card 等展开式组件，减少多层页面跳转
+- 支持手机浏览器使用的 Drawer 导航和响应式布局
+- 使用 Ant Design 响应式组件，保持桌面端与移动端一致的业务体验
+
+## 技术架构
+
+### Backend
 
 - Python 3.12+
 - FastAPI + RESTful API
@@ -12,7 +66,21 @@ Silly Teamwork 是面向大学课程小组的团队协作系统。当前后端�
 - JWT（PyJWT）+ Argon2 密码哈希（pwdlib）
 - Pydantic Settings 环境配置
 - pytest、Ruff、mypy、pre-commit
+
+### Frontend
+
+- React
+- TypeScript
+- Vite
+- Ant Design
+- TanStack Query
+- Zustand
+- openapi-fetch 与 FastAPI OpenAPI 类型
+
+### Deployment
+
 - Docker / Docker Compose
+- Ubuntu Server
 
 ## 项目结构
 
@@ -42,6 +110,11 @@ Silly Teamwork 是面向大学课程小组的团队协作系统。当前后端�
 │   ├── utils/                     # 无业务状态的通用小工具
 │   └── main.py                    # 应用工厂、中间件、生命周期和入口
 ├── tests/                         # 与源码结构对应的自动化测试
+├── frontend/                      # React + TypeScript + Vite 前端
+│   ├── src/api/                   # openapi-fetch 客户端与生成类型
+│   ├── src/features/              # 按业务域组织的 API、hooks 与组件
+│   ├── src/pages/                 # 页面组件
+│   └── src/layouts/               # 桌面端与移动端公共布局
 ├── .env.example                   # 可提交的环境变量示例（不含真实密钥）
 ├── .pre-commit-config.yaml        # 提交前自动检查
 ├── alembic.ini                    # Alembic 主配置
@@ -65,11 +138,11 @@ Silly Teamwork 是面向大学课程小组的团队协作系统。当前后端�
 | `src/silly_teamwork/api/v1/endpoints/__init__.py` | 声明 v1 路由模块包。 |
 | `src/silly_teamwork/api/v1/endpoints/health.py` | 提供无需数据库的存活检查。 |
 | `src/silly_teamwork/api/v1/endpoints/auth.py` | 邀请码注册和 JWT 登录接口。 |
-| `src/silly_teamwork/api/v1/endpoints/users.py` | 用户资料接口，目前提供当前用户查询。 |
-| `src/silly_teamwork/api/v1/endpoints/teams.py` | 预留小组与小组成员接口。 |
-| `src/silly_teamwork/api/v1/endpoints/projects.py` | 预留项目与项目成员接口。 |
-| `src/silly_teamwork/api/v1/endpoints/tasks.py` | 预留任务与任务参与者接口。 |
-| `src/silly_teamwork/api/v1/endpoints/files.py` | 预留文件上传、元数据与下载接口。 |
+| `src/silly_teamwork/api/v1/endpoints/users.py` | 当前用户查询、资料更新、密码修改和头像管理接口。 |
+| `src/silly_teamwork/api/v1/endpoints/teams.py` | 小组、小组成员、邀请和小组删除接口。 |
+| `src/silly_teamwork/api/v1/endpoints/projects.py` | 科目、科目成员、科目文件索引和科目删除接口。 |
+| `src/silly_teamwork/api/v1/endpoints/tasks.py` | 任务、任务成员、截止查询和任务删除接口。 |
+| `src/silly_teamwork/api/v1/endpoints/files.py` | 文件上传、索引、元数据、下载和删除接口。 |
 | `src/silly_teamwork/core/__init__.py` | 声明跨领域基础设施包。 |
 | `src/silly_teamwork/core/config.py` | 从环境变量和 `.env` 加载、校验并缓存配置。 |
 | `src/silly_teamwork/core/security.py` | 提供 Argon2 密码哈希和 JWT 签发/解析基础函数。 |
@@ -121,6 +194,8 @@ Silly Teamwork 是面向大学课程小组的团队协作系统。当前后端�
 - `Task`、`TaskMember`
 - `File`
 - `InvitationCode`
+- `SystemAdmin`
+- `Notification`
 
 ## 本地启动
 
@@ -260,6 +335,36 @@ Authorization: Bearer <access_token>
 
 Swagger UI 会根据路由模型自动显示字段、响应状态以及 HTTP Bearer 认证按钮。
 
+## API 功能概览
+
+以下业务接口均位于 `/api/v1`，受保护接口需要携带 Bearer JWT。完整请求字段、响应模型和
+错误状态以 Swagger UI 或 OpenAPI 文档为准。
+
+### 认证与用户
+
+- `POST /api/v1/auth/register`：使用全局或团队邀请码注册
+- `POST /api/v1/auth/login`：登录并获取 JWT access token
+- `GET /api/v1/users/me`：获取当前用户
+- `PATCH /api/v1/users/me`：更新昵称和个人简介
+- `PATCH /api/v1/users/me/password`：验证原密码并修改密码
+- `POST /api/v1/users/me/avatar`：上传当前用户头像
+- `DELETE /api/v1/users/me/avatar`：删除当前用户头像
+- `GET /api/v1/users/{user_id}/avatar`：读取用户头像
+
+### 文件索引
+
+- `GET /api/v1/files/index`：查询当前用户可访问的全局文件索引
+- `GET /api/v1/projects/{project_id}/file-index`：查询科目共享文件和任务附件索引
+
+现有文件上传、列表、下载、元数据修改和删除接口保持不变。索引接口只聚合已有 `File`
+记录，不复制文件，也不创建额外索引数据。
+
+### 资源删除
+
+- `DELETE /api/v1/tasks/{task_id}`：永久删除任务及其关联数据和附件
+- `DELETE /api/v1/projects/{project_id}`：永久删除科目及其任务、成员关系和文件
+- `DELETE /api/v1/teams/{team_id}`：永久删除小组下的科目、任务、成员关系和文件
+
 ## Team API
 
 所有 Team 接口都需要：
@@ -276,6 +381,7 @@ Authorization: Bearer <access_token>
 - `POST /api/v1/teams/{team_id}/invite`：leader 创建单次邀请码
 - `POST /api/v1/teams/join`：当前用户使用邀请码加入团队
 - `GET /api/v1/teams/{team_id}/members`：查询团队成员及角色
+- `DELETE /api/v1/teams/{team_id}`：永久删除小组及其关联资源
 
 创建团队示例：
 
@@ -317,15 +423,15 @@ Authorization: Bearer <access_token>
 全局邀请码的 `team_id` 为 `NULL`，注册成功后不会自动加入特定团队，数据库仍只保存
 SHA-256 摘要。
 
-文件上传目录默认是 `uploads/`，该目录不进入 Git。第一版实现文件功能时，应在数据库
-中保存元数据和访问控制信息，在对象存储或受控目录中保存二进制内容，并且不要直接信任
-客户端文件名。
+文件上传目录默认是 `uploads/`，该目录不进入 Git。数据库保存文件元数据和受控存储路径，
+二进制内容保存在本地受控目录。上传时使用随机存储文件名并安全处理客户端文件名，文件
+访问权限由 TeamMember、ProjectMember、TaskMember 和 SystemAdmin 关系动态计算。
 
 ## 后续推荐顺序
 
-1. 按 Team → Project → Task → File 的顺序实现权限与 REST API。
-2. 增加刷新令牌、注销、密码重置和邮箱验证流程。
-3. 为各业务 service 和 endpoint 补齐正常、越权、无效输入及并发场景测试。
+1. 增加刷新令牌、密码重置和邮箱验证流程。
+2. 引入可选的异步提醒渠道和定时任务 worker。
+3. 持续补充正常、越权、无效输入及并发场景测试。
 
 ## 设计依据
 
