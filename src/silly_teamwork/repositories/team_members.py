@@ -3,6 +3,7 @@ from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from silly_teamwork.models.enums import TeamRole
 from silly_teamwork.models.team_member import TeamMember
 from silly_teamwork.models.user import User
 
@@ -41,3 +42,13 @@ async def delete_by_team_and_user(session: AsyncSession, team_id: UUID, user_id:
         return False
     await session.delete(membership)
     return True
+
+
+async def list_leader_team_ids(session: AsyncSession, user_id: UUID) -> set[UUID]:
+    result = await session.execute(
+        select(TeamMember.team_id).where(
+            TeamMember.user_id == user_id,
+            TeamMember.role == TeamRole.OWNER,
+        )
+    )
+    return set(result.scalars().all())

@@ -284,6 +284,20 @@ async def test_super_admin_can_modify_and_delete_any_file(
     file_context: FileApiContext,
 ) -> None:
     uploaded = await _upload_task_file(file_context, file_context.task_member)
+    list_response = await file_context.client.get(
+        f"/api/v1/tasks/{file_context.task.id}/files",
+        headers=file_context.headers[file_context.admin.id],
+    )
+    assert list_response.status_code == 200
+    assert [item["id"] for item in list_response.json()] == [uploaded["id"]]
+
+    download_response = await file_context.client.get(
+        f"/api/v1/files/{uploaded['id']}/download",
+        headers=file_context.headers[file_context.admin.id],
+    )
+    assert download_response.status_code == 200
+    assert download_response.content == b"task attachment"
+
     patch_response = await file_context.client.patch(
         f"/api/v1/files/{uploaded['id']}",
         headers=file_context.headers[file_context.admin.id],

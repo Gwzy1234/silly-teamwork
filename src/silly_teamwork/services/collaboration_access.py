@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -16,10 +17,65 @@ from silly_teamwork.repositories import (
     tasks,
     team_members,
 )
-from silly_teamwork.services.exceptions import ProjectNotFoundError, TaskNotFoundError
+from silly_teamwork.services.exceptions import (
+    FileNotFoundError,
+    ProjectNotFoundError,
+    TaskNotFoundError,
+)
+
+
+@dataclass(frozen=True, slots=True)
+class CollaborationFileAccessScope:
+    can_access_all_files: bool
+    leader_team_ids: frozenset[UUID]
+    project_ids: frozenset[UUID]
+    task_ids: frozenset[UUID]
 
 
 class CollaborationAccessService:
+    async def get_file_access_scope(
+        self, session: AsyncSession, current_user: User
+    ) -> CollaborationFileAccessScope:
+        """Return the existing collaboration relationships in a query-friendly form."""
+
+        is_system_admin = await system_admins.get_by_user_id(session, current_user.id) is not None
+        leader_team_ids = await team_members.list_leader_team_ids(session, current_user.id)
+        project_ids = await project_members.list_project_ids_for_user(session, current_user.id)
+        task_ids = await task_members.list_task_ids_for_user(session, current_user.id)
+        return CollaborationFileAccessScope(
+            can_access_all_files=is_system_admin,
+            leader_team_ids=frozenset(leader_team_ids),
+            project_ids=frozenset(project_ids),
+            task_ids=frozenset(task_ids),
+        )
+
+    async def require_project_file_access(
+        self, session: AsyncSession, current_user: User, project_id: UUID
+    ) -> Project:
+        """Authorize a project-scoped file view without changing project business access."""
+
+        project = await projects.get_by_id(session, project_id)
+        if project is None:
+            raise ProjectNotFoundError("Project not found")
+        if await system_admins.get_by_user_id(session, current_user.id) is not None:
+            return project
+        if not await self._can_access_project_record(session, current_user.id, project):
+            raise ProjectNotFoundError("Project not found")
+        return project
+
+    async def require_task_file_access(
+        self, session: AsyncSession, current_user: User, task_id: UUID
+    ) -> Task:
+        """Authorize a task-scoped file view without changing task business access."""
+
+        task = await tasks.get_by_id(session, task_id)
+        if task is None:
+            raise TaskNotFoundError("Task not found")
+        if await system_admins.get_by_user_id(session, current_user.id) is not None:
+            return task
+        if not await self._can_access_task_record(session, current_user.id, task):
+            raise TaskNotFoundError("Task not found")
+        return task
     async def can_access_project(
         self, session: AsyncSession, current_user: User, project_id: UUID
     ) -> bool:
@@ -160,6 +216,19 @@ class CollaborationAccessService:
             session, project.id, current_user.id
         )
         return membership is not None and membership.role is ProjectRole.OWNER
+
+    async def require_file_access(
+        self, session: AsyncSession, current_user: User, file: File
+    ) -> None:
+        if await system_admins.get_by_user_id(session, current_user.id) is not None:
+            return
+        if file.project_id is not None:
+            await self.require_project_file_access(session, current_user, file.project_id)
+            return
+        if file.task_id is not None:
+            await self.require_task_file_access(session, current_user, file.task_id)
+            return
+        raise FileNotFoundError("File not found")
 
     @staticmethod
     async def _is_team_leader(

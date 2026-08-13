@@ -47,3 +47,10 @@ async def list_for_project(session: AsyncSession, project_id: UUID) -> list[Proj
 
 async def delete(session: AsyncSession, membership: ProjectMember) -> None:
     await session.delete(membership)
+
+
+async def list_project_ids_for_user(session: AsyncSession, user_id: UUID) -> set[UUID]:
+    result = await session.execute(
+        select(ProjectMember.project_id).where(ProjectMember.user_id == user_id)
+    )
+    return set(result.scalars().all())

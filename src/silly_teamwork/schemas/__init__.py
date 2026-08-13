@@ -7,7 +7,17 @@ from silly_teamwork.schemas.admin import (
     AdminUserResponse,
 )
 from silly_teamwork.schemas.auth import LoginRequest, RegisterRequest, TokenResponse
-from silly_teamwork.schemas.file import FileMetadataUpdate, FileResponse
+from silly_teamwork.schemas.file import (
+    FileIndexItemResponse,
+    FileIndexProjectResponse,
+    FileIndexTaskResponse,
+    FileIndexTeamResponse,
+    FileIndexUploaderResponse,
+    FileMetadataUpdate,
+    FileResponse,
+    ProjectFileIndexResponse,
+    ProjectFileTaskGroupResponse,
+)
 from silly_teamwork.schemas.notification import (
     MarkAllNotificationsReadResponse,
     NotificationResponse,
@@ -50,6 +60,11 @@ __all__ = [
     "AdminUserResponse",
     "FileMetadataUpdate",
     "FileResponse",
+    "FileIndexItemResponse",
+    "FileIndexProjectResponse",
+    "FileIndexTaskResponse",
+    "FileIndexTeamResponse",
+    "FileIndexUploaderResponse",
     "InvitationCodeResponse",
     "InvitationCreateRequest",
     "InvitationRole",
@@ -57,6 +72,8 @@ __all__ = [
     "MarkAllNotificationsReadResponse",
     "NotificationResponse",
     "ProjectCreate",
+    "ProjectFileIndexResponse",
+    "ProjectFileTaskGroupResponse",
     "ProjectMemberAdd",
     "ProjectMemberResponse",
     "ProjectOwnerTransfer",

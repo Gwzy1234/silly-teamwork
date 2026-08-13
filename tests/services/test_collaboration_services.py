@@ -248,6 +248,11 @@ async def test_access_matrix(collaboration_context: CollaborationContext) -> Non
         assert await access.can_upload_task_file(session, collaborator, ctx.task_id)
         assert await access.can_upload_task_file(session, reviewer, ctx.task_id)
         assert not await access.can_upload_task_file(session, outsider, ctx.task_id)
+        admin_file_scope = await access.get_file_access_scope(session, admin)
+        assert admin_file_scope.can_access_all_files
+        assert (
+            await access.require_project_file_access(session, admin, ctx.project_id)
+        ).id == ctx.project_id
         with pytest.raises(ProjectNotFoundError):
             await access.require_project_access(session, outsider, ctx.project_id)
 

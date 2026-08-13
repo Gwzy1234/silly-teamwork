@@ -1,9 +1,18 @@
+from typing import cast
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import and_, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.sql.elements import ColumnElement
+from sqlalchemy.sql.selectable import Select
 
 from silly_teamwork.models.file import File
+from silly_teamwork.models.project import Project
+from silly_teamwork.models.task import Task
+from silly_teamwork.models.team import Team
+from silly_teamwork.models.user import User
+
+FileIndexRow = tuple[File, Project, Task | None, Team, User | None]
 
 
 def create_file(session: AsyncSession, file: File) -> None:
@@ -45,3 +54,81 @@ async def delete_file(session: AsyncSession, file: File) -> None:
 def update_file_metadata(file: File, *, original_name: str) -> File:
     file.original_name = original_name
     return file
+
+
+async def list_accessible_file_index(
+    session: AsyncSession,
+    *,
+    can_access_all_files: bool,
+    leader_team_ids: frozenset[UUID],
+    accessible_project_ids: frozenset[UUID],
+    directly_accessible_task_ids: frozenset[UUID],
+    query: str | None = None,
+    team_id: UUID | None = None,
+    project_id: UUID | None = None,
+    task_id: UUID | None = None,
+) -> list[FileIndexRow]:
+    statement = _file_index_statement()
+    if not can_access_all_files:
+        statement = statement.where(
+            _file_access_condition(
+                leader_team_ids,
+                accessible_project_ids,
+                directly_accessible_task_ids,
+            )
+        )
+    if query:
+        statement = statement.where(File.original_name.ilike(f"%{query}%"))
+    if team_id is not None:
+        statement = statement.where(Project.team_id == team_id)
+    if project_id is not None:
+        statement = statement.where(Project.id == project_id)
+    if task_id is not None:
+        statement = statement.where(File.task_id == task_id)
+    result = await session.execute(statement.order_by(File.created_at.desc(), File.id.desc()))
+    return list(result.tuples().all())
+
+
+async def list_project_file_index(
+    session: AsyncSession,
+    project_id: UUID,
+    *,
+    query: str | None = None,
+) -> list[FileIndexRow]:
+    statement = _file_index_statement().where(Project.id == project_id)
+    if query:
+        statement = statement.where(File.original_name.ilike(f"%{query}%"))
+    result = await session.execute(statement.order_by(File.created_at.desc(), File.id.desc()))
+    return list(result.tuples().all())
+
+
+def _file_index_statement() -> Select[tuple[File, Project, Task | None, Team, User | None]]:
+    statement = (
+        select(File, Project, Task, Team, User)
+        .outerjoin(Task, File.task_id == Task.id)
+        .join(
+            Project,
+            or_(File.project_id == Project.id, Task.project_id == Project.id),
+        )
+        .join(Team, Project.team_id == Team.id)
+        .outerjoin(User, File.uploaded_by_id == User.id)
+    )
+    return cast(Select[tuple[File, Project, Task | None, Team, User | None]], statement)
+
+
+def _file_access_condition(
+    leader_team_ids: frozenset[UUID],
+    accessible_project_ids: frozenset[UUID],
+    directly_accessible_task_ids: frozenset[UUID],
+) -> ColumnElement[bool]:
+    project_access = or_(
+        Project.team_id.in_(leader_team_ids),
+        Project.id.in_(accessible_project_ids),
+    )
+    return or_(
+        and_(File.project_id.is_not(None), project_access),
+        and_(
+            File.task_id.is_not(None),
+            or_(project_access, File.task_id.in_(directly_accessible_task_ids)),
+        ),
+    )

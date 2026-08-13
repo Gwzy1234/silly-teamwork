@@ -60,3 +60,10 @@ async def delete_for_user_in_project(
             TaskMember.task_id.in_(select(Task.id).where(Task.project_id == project_id)),
         )
     )
+
+
+async def list_task_ids_for_user(session: AsyncSession, user_id: UUID) -> set[UUID]:
+    result = await session.execute(
+        select(TaskMember.task_id).where(TaskMember.user_id == user_id)
+    )
+    return set(result.scalars().all())

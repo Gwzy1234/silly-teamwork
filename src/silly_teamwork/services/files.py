@@ -14,6 +14,15 @@ from silly_teamwork.core.file_storage import LocalFileStorage, sanitize_filename
 from silly_teamwork.models.file import File
 from silly_teamwork.models.user import User
 from silly_teamwork.repositories import files, projects, tasks
+from silly_teamwork.schemas.file import (
+    FileIndexItemResponse,
+    FileIndexProjectResponse,
+    FileIndexTaskResponse,
+    FileIndexTeamResponse,
+    FileIndexUploaderResponse,
+    ProjectFileIndexResponse,
+    ProjectFileTaskGroupResponse,
+)
 from silly_teamwork.services.collaboration_access import CollaborationAccessService
 from silly_teamwork.services.exceptions import (
     FileAccessDeniedError,
@@ -106,14 +115,74 @@ class FileService:
     async def list_project_files(
         self, session: AsyncSession, current_user: User, project_id: UUID
     ) -> list[File]:
-        await self.access.require_project_access(session, current_user, project_id)
+        await self.access.require_project_file_access(session, current_user, project_id)
         return await files.list_project_files(session, project_id)
 
     async def list_task_files(
         self, session: AsyncSession, current_user: User, task_id: UUID
     ) -> list[File]:
-        await self.access.require_task_access(session, current_user, task_id)
+        await self.access.require_task_file_access(session, current_user, task_id)
         return await files.list_task_files(session, task_id)
+
+    async def list_file_index(
+        self,
+        session: AsyncSession,
+        current_user: User,
+        *,
+        query: str | None = None,
+        team_id: UUID | None = None,
+        project_id: UUID | None = None,
+        task_id: UUID | None = None,
+    ) -> list[FileIndexItemResponse]:
+        access_scope = await self.access.get_file_access_scope(session, current_user)
+        rows = await files.list_accessible_file_index(
+            session,
+            can_access_all_files=access_scope.can_access_all_files,
+            leader_team_ids=access_scope.leader_team_ids,
+            accessible_project_ids=access_scope.project_ids,
+            directly_accessible_task_ids=access_scope.task_ids,
+            query=self._normalize_search(query),
+            team_id=team_id,
+            project_id=project_id,
+            task_id=task_id,
+        )
+        return [self._index_item(row) for row in rows]
+
+    async def get_project_file_index(
+        self,
+        session: AsyncSession,
+        current_user: User,
+        project_id: UUID,
+        *,
+        query: str | None = None,
+    ) -> ProjectFileIndexResponse:
+        project = await self.access.require_project_file_access(
+            session, current_user, project_id
+        )
+        rows = await files.list_project_file_index(
+            session, project_id, query=self._normalize_search(query)
+        )
+        shared_files: list[FileIndexItemResponse] = []
+        grouped_tasks: dict[UUID, ProjectFileTaskGroupResponse] = {}
+        for row in rows:
+            item = self._index_item(row)
+            task = row[2]
+            if task is None:
+                shared_files.append(item)
+                continue
+            group = grouped_tasks.get(task.id)
+            if group is None:
+                group = ProjectFileTaskGroupResponse(
+                    task=FileIndexTaskResponse(id=task.id, title=task.title),
+                    files=[],
+                )
+                grouped_tasks[task.id] = group
+            group.files.append(item)
+        return ProjectFileIndexResponse(
+            project=FileIndexProjectResponse(id=project.id, name=project.name),
+            shared_files=shared_files,
+            tasks=list(grouped_tasks.values()),
+        )
 
     async def get_download(
         self, session: AsyncSession, current_user: User, file_id: UUID
@@ -226,13 +295,42 @@ class FileService:
     async def _require_file_access(
         self, session: AsyncSession, current_user: User, file: File
     ) -> None:
-        if file.project_id is not None:
-            await self.access.require_project_access(session, current_user, file.project_id)
-            return
-        if file.task_id is not None:
-            await self.access.require_task_access(session, current_user, file.task_id)
-            return
-        raise FileNotFoundError("File not found")
+        await self.access.require_file_access(session, current_user, file)
+
+    @staticmethod
+    def _normalize_search(query: str | None) -> str | None:
+        if query is None:
+            return None
+        return query.strip() or None
+
+    @staticmethod
+    def _index_item(row: files.FileIndexRow) -> FileIndexItemResponse:
+        file, project, task, team, uploader = row
+        return FileIndexItemResponse(
+            id=file.id,
+            project_id=file.project_id,
+            task_id=file.task_id,
+            uploaded_by_id=file.uploaded_by_id,
+            original_name=file.original_name,
+            content_type=file.content_type,
+            size_bytes=file.size_bytes,
+            checksum_sha256=file.checksum_sha256,
+            created_at=file.created_at,
+            updated_at=file.updated_at,
+            uploaded_at=file.created_at,
+            team=FileIndexTeamResponse(id=team.id, name=team.name),
+            project=FileIndexProjectResponse(id=project.id, name=project.name),
+            task=None
+            if task is None
+            else FileIndexTaskResponse(id=task.id, title=task.title),
+            uploader=None
+            if uploader is None
+            else FileIndexUploaderResponse(
+                id=uploader.id,
+                username=uploader.username,
+                nickname=uploader.display_name,
+            ),
+        )
 
 
 def get_file_service() -> FileService:

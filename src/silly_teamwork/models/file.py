@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from uuid import UUID
 
-from sqlalchemy import BigInteger, CheckConstraint, ForeignKey, String
+from sqlalchemy import BigInteger, CheckConstraint, ForeignKey, Index, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from silly_teamwork.db.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
@@ -23,6 +23,10 @@ class File(UUIDPrimaryKeyMixin, TimestampMixin, Base):
             "OR (project_id IS NULL AND task_id IS NOT NULL)",
             name="has_exactly_one_parent",
         ),
+        Index("ix_files_project_created_id", "project_id", "created_at", "id"),
+        Index("ix_files_task_created_id", "task_id", "created_at", "id"),
+        Index("ix_files_uploader_created_id", "uploaded_by_id", "created_at", "id"),
+        Index("ix_files_created_id", "created_at", "id"),
     )
 
     project_id: Mapped[UUID | None] = mapped_column(

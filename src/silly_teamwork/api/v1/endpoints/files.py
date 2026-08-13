@@ -3,11 +3,16 @@
 from typing import Annotated, NoReturn
 from uuid import UUID
 
-from fastapi import APIRouter, File, HTTPException, Response, UploadFile, status
+from fastapi import APIRouter, File, HTTPException, Query, Response, UploadFile, status
 from fastapi.responses import FileResponse as DownloadResponse
 
 from silly_teamwork.api.dependencies import CurrentUser, DbSession, FileServiceDep
-from silly_teamwork.schemas.file import FileMetadataUpdate, FileResponse
+from silly_teamwork.schemas.file import (
+    FileIndexItemResponse,
+    FileMetadataUpdate,
+    FileResponse,
+    ProjectFileIndexResponse,
+)
 from silly_teamwork.services.exceptions import (
     FileAccessDeniedError,
     FileNotFoundError,
@@ -34,6 +39,51 @@ def _raise_file_http_error(error: Exception) -> NoReturn:
     if isinstance(error, FileStorageError):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(error)) from error
     raise error
+
+
+@router.get(
+    "/index",
+    response_model=list[FileIndexItemResponse],
+    summary="List all files accessible to the current user",
+)
+async def list_file_index(
+    session: DbSession,
+    current_user: CurrentUser,
+    file_service: FileServiceDep,
+    q: Annotated[str | None, Query(max_length=255)] = None,
+    team_id: UUID | None = None,
+    project_id: UUID | None = None,
+    task_id: UUID | None = None,
+) -> list[FileIndexItemResponse]:
+    return await file_service.list_file_index(
+        session,
+        current_user,
+        query=q,
+        team_id=team_id,
+        project_id=project_id,
+        task_id=task_id,
+    )
+
+
+@project_router.get(
+    "/{project_id}/file-index",
+    response_model=ProjectFileIndexResponse,
+    summary="List project shared files and task attachments",
+    responses={404: {"description": "Project not found or not accessible"}},
+)
+async def get_project_file_index(
+    project_id: UUID,
+    session: DbSession,
+    current_user: CurrentUser,
+    file_service: FileServiceDep,
+    q: Annotated[str | None, Query(max_length=255)] = None,
+) -> ProjectFileIndexResponse:
+    try:
+        return await file_service.get_project_file_index(
+            session, current_user, project_id, query=q
+        )
+    except Exception as error:
+        _raise_file_http_error(error)
 
 
 @project_router.post(
