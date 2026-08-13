@@ -36,6 +36,13 @@ export async function getProject(projectId: string): Promise<Project> {
   return data
 }
 
+export async function deleteProject(projectId: string): Promise<void> {
+  const { error, response } = await apiClient.DELETE('/api/v1/projects/{project_id}', {
+    params: { path: { project_id: projectId } },
+  })
+  if (!response.ok) throw createApiError(response, error)
+}
+
 export async function updateProject(
   projectId: string,
   payload: ProjectUpdate,

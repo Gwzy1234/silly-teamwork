@@ -36,6 +36,13 @@ export async function getTask(taskId: string): Promise<Task> {
   return data
 }
 
+export async function deleteTask(taskId: string): Promise<void> {
+  const { error, response } = await apiClient.DELETE('/api/v1/tasks/{task_id}', {
+    params: { path: { task_id: taskId } },
+  })
+  if (!response.ok) throw createApiError(response, error)
+}
+
 export async function updateTask(taskId: string, payload: TaskUpdate): Promise<Task> {
   const { data, error, response } = await apiClient.PATCH('/api/v1/tasks/{task_id}', {
     params: { path: { task_id: taskId } },

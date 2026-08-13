@@ -172,6 +172,23 @@
   border-radius: 16px;
 }
 
+.danger-zone-card {
+  border-color: #ffccc7;
+  background: #fffafa;
+}
+
+.danger-zone-card .ant-card-head {
+  border-bottom-color: #ffccc7;
+}
+
+.danger-zone-card .ant-card-head-title {
+  color: #cf1322;
+}
+
+.danger-zone-card .ant-btn-dangerous {
+  min-height: 40px;
+}
+
 .metric-card-link {
   display: block;
   height: 100%;
@@ -576,6 +593,11 @@
   .settings-profile-layout {
     grid-template-columns: minmax(0, 1fr);
     gap: 24px;
+  }
+
+  .danger-zone-card .ant-card-body > .ant-flex > .ant-btn-dangerous {
+    width: 100%;
+    min-height: 44px;
   }
 
   .settings-avatar-panel {

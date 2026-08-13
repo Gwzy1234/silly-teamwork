@@ -40,6 +40,13 @@ export async function getTeam(teamId: string): Promise<TeamDetail> {
   return data
 }
 
+export async function deleteTeam(teamId: string): Promise<void> {
+  const { error, response } = await apiClient.DELETE('/api/v1/teams/{team_id}', {
+    params: { path: { team_id: teamId } },
+  })
+  if (!response.ok) throw createApiError(response, error)
+}
+
 export async function listTeamMembers(teamId: string): Promise<TeamMember[]> {
   const { data, error, response } = await apiClient.GET(
     '/api/v1/teams/{team_id}/members',

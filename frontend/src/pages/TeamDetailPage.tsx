@@ -2,6 +2,7 @@ import {
   ArrowLeftOutlined,
   BookOutlined,
   CopyOutlined,
+  DeleteOutlined,
   LinkOutlined,
   PlusOutlined,
   TeamOutlined,
@@ -30,9 +31,10 @@ import {
 import dayjs from 'dayjs'
 import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { getApiErrorMessage } from '../api/errors'
+import { ApiError, getApiErrorMessage } from '../api/errors'
 import {
   useCreateTeamInvitation,
+  useDeleteTeam,
   useTeam,
   useTeamMembers,
 } from '../features/teams/hooks'
@@ -50,12 +52,15 @@ export function TeamDetailPage() {
   const team = useTeam(teamId)
   const members = useTeamMembers(teamId)
   const inviteMutation = useCreateTeamInvitation(teamId)
+  const deleteMutation = useDeleteTeam(teamId)
   const projects = useProjects(teamId)
   const createProjectMutation = useCreateProject(teamId)
   const [inviteOpen, setInviteOpen] = useState(false)
   const [inviteCode, setInviteCode] = useState<string | null>(null)
   const [inviteForm] = Form.useForm<InvitationCreateRequest>()
   const [projectOpen, setProjectOpen] = useState(false)
+  const [deleteOpen, setDeleteOpen] = useState(false)
+  const [deleteName, setDeleteName] = useState('')
   const [projectForm] = Form.useForm<ProjectFormValues>()
 
   const createInvite = async () => {
@@ -78,6 +83,21 @@ export function TeamDetailPage() {
       navigate(`/projects/${project.id}`)
     } catch (error) {
       if (error instanceof Error) message.error(getApiErrorMessage(error))
+    }
+  }
+
+  const deleteCurrentTeam = async () => {
+    if (!team.data || deleteName !== team.data.name) return
+    try {
+      await deleteMutation.mutateAsync()
+      message.success('小组已删除')
+      navigate('/teams', { replace: true })
+    } catch (error) {
+      message.error(
+        error instanceof ApiError && error.status === 403
+          ? '无权限删除该小组'
+          : getApiErrorMessage(error),
+      )
     }
   }
 
@@ -204,6 +224,27 @@ export function TeamDetailPage() {
         )}
       </Card>
 
+      <Card className="content-card danger-zone-card" title="危险操作">
+        <Flex justify="space-between" align="center" gap={16} wrap>
+          <div>
+            <Typography.Text strong>删除小组</Typography.Text>
+            <Typography.Paragraph type="secondary" style={{ margin: '4px 0 0' }}>
+              将永久删除小组内所有科目、任务和文件，此操作无法恢复。
+            </Typography.Paragraph>
+          </div>
+          <Button
+            danger
+            icon={<DeleteOutlined />}
+            onClick={() => {
+              setDeleteName('')
+              setDeleteOpen(true)
+            }}
+          >
+            删除小组
+          </Button>
+        </Flex>
+      </Card>
+
       <Modal
         title="生成团队邀请码"
         open={inviteOpen}
@@ -263,6 +304,41 @@ export function TeamDetailPage() {
         <Typography.Paragraph type="secondary" style={{ marginBottom: 0 }}>
           创建权限由后端验证；没有权限时不会保存任何科目数据。
         </Typography.Paragraph>
+      </Modal>
+
+      <Modal
+        title="删除小组"
+        open={deleteOpen}
+        okText="永久删除"
+        cancelText="取消"
+        confirmLoading={deleteMutation.isPending}
+        okButtonProps={{ danger: true, disabled: deleteName !== detail.name }}
+        onOk={deleteCurrentTeam}
+        onCancel={() => {
+          if (deleteMutation.isPending) return
+          setDeleteOpen(false)
+          setDeleteName('')
+        }}
+        closable={!deleteMutation.isPending}
+        maskClosable={!deleteMutation.isPending}
+      >
+        <Alert
+          showIcon
+          type="error"
+          message="这是不可恢复的操作"
+          description="该小组下的科目、任务、成员关系和文件都会被永久删除。"
+          style={{ marginBottom: 16 }}
+        />
+        <Typography.Paragraph>
+          请输入小组名称 <Typography.Text strong>{detail.name}</Typography.Text> 以确认：
+        </Typography.Paragraph>
+        <Input
+          value={deleteName}
+          onChange={(event) => setDeleteName(event.target.value)}
+          placeholder={detail.name}
+          disabled={deleteMutation.isPending}
+          autoComplete="off"
+        />
       </Modal>
     </Flex>
   )

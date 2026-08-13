@@ -1,7 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { dashboardQueryKeys } from '../dashboard/hooks'
+import { notificationQueryKeys } from '../notifications/hooks'
 import {
   addProjectMember,
   createProject,
+  deleteProject,
   getProject,
   listProjectMembers,
   listProjects,
@@ -48,6 +51,24 @@ export function useCreateProject(teamId: string) {
       createProject(teamId, payload),
     onSuccess: () =>
       queryClient.invalidateQueries({ queryKey: projectQueryKeys.teamProjects(teamId) }),
+  })
+}
+
+export function useDeleteProject(projectId: string, teamId: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: () => deleteProject(projectId),
+    async onSuccess() {
+      queryClient.removeQueries({ queryKey: projectQueryKeys.detail(projectId) })
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: projectQueryKeys.teamProjects(teamId) }),
+        queryClient.invalidateQueries({ queryKey: ['tasks'] }),
+        queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.upcomingRoot }),
+        queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.overdue }),
+        queryClient.invalidateQueries({ queryKey: notificationQueryKeys.all }),
+        queryClient.invalidateQueries({ queryKey: ['files', 'index'] }),
+      ])
+    },
   })
 }
 

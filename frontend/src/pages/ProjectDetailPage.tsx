@@ -19,6 +19,7 @@ import {
   Empty,
   Flex,
   Form,
+  Input,
   List,
   Modal,
   Popconfirm,
@@ -32,7 +33,7 @@ import {
 import dayjs from 'dayjs'
 import { useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { getApiErrorMessage } from '../api/errors'
+import { ApiError, getApiErrorMessage } from '../api/errors'
 import { ProjectFileIndexPanel } from '../features/files/components/ProjectFileIndexPanel'
 import { ProjectForm } from '../features/projects/components/ProjectForm'
 import { projectStatusOptions } from '../features/projects/constants'
@@ -43,6 +44,7 @@ import {
 } from '../features/projects/forms'
 import {
   useAddProjectMember,
+  useDeleteProject,
   useProject,
   useProjectMembers,
   useRemoveProjectMember,
@@ -71,6 +73,7 @@ export function ProjectDetailPage() {
   const updateMutation = useUpdateProject(projectId)
   const statusMutation = useUpdateProjectStatus(projectId)
   const addMutation = useAddProjectMember(projectId)
+  const deleteMutation = useDeleteProject(projectId, project.data?.team_id || '')
   const removeMutation = useRemoveProjectMember(projectId)
   const transferMutation = useTransferProjectOwner(projectId)
   const [editOpen, setEditOpen] = useState(false)
@@ -78,6 +81,8 @@ export function ProjectDetailPage() {
   const [ownerOpen, setOwnerOpen] = useState(false)
   const [statusOpen, setStatusOpen] = useState(false)
   const [createTaskOpen, setCreateTaskOpen] = useState(false)
+  const [deleteOpen, setDeleteOpen] = useState(false)
+  const [deleteName, setDeleteName] = useState('')
   const [editForm] = Form.useForm<ProjectFormValues>()
   const [addForm] = Form.useForm<{ user_id: string }>()
   const [ownerForm] = Form.useForm<{ user_id: string }>()
@@ -111,6 +116,21 @@ export function ProjectDetailPage() {
   const openEdit = () => {
     editForm.setFieldsValue(projectFormInitialValues(detail))
     setEditOpen(true)
+  }
+
+  const deleteCurrentProject = async () => {
+    if (deleteName !== detail.name) return
+    try {
+      await deleteMutation.mutateAsync()
+      message.success('科目已永久删除')
+      navigate(`/teams/${detail.team_id}`, { replace: true })
+    } catch (error) {
+      message.error(
+        error instanceof ApiError && error.status === 403
+          ? '无权限删除该科目'
+          : getApiErrorMessage(error),
+      )
+    }
   }
 
   return (
@@ -232,6 +252,27 @@ export function ProjectDetailPage() {
         )}
       </Card>
 
+      <Card className="content-card danger-zone-card" title="危险操作">
+        <Flex justify="space-between" align="center" gap={16} wrap>
+          <div>
+            <Typography.Text strong>永久删除科目</Typography.Text>
+            <Typography.Paragraph type="secondary" style={{ margin: '4px 0 0' }}>
+              归档仍可通过科目状态操作；永久删除会同时清理任务和文件且无法恢复。
+            </Typography.Paragraph>
+          </div>
+          <Button
+            danger
+            icon={<DeleteOutlined />}
+            onClick={() => {
+              setDeleteName('')
+              setDeleteOpen(true)
+            }}
+          >
+            永久删除科目
+          </Button>
+        </Flex>
+      </Card>
+
       <Modal title="修改科目" open={editOpen} width={620} onCancel={() => setEditOpen(false)} onOk={() => runAction(async () => updateMutation.mutateAsync(toProjectUpdate(await editForm.validateFields())), '科目已更新', () => setEditOpen(false))} confirmLoading={updateMutation.isPending} okText="保存">
         <ProjectForm form={editForm} />
       </Modal>
@@ -261,6 +302,41 @@ export function ProjectDetailPage() {
           </Form.Item>
           <Alert showIcon type="warning" message="原负责人将自动变为普通科目成员。" />
         </Form>
+      </Modal>
+
+      <Modal
+        title="永久删除科目"
+        open={deleteOpen}
+        okText="永久删除"
+        cancelText="取消"
+        confirmLoading={deleteMutation.isPending}
+        okButtonProps={{ danger: true, disabled: deleteName !== detail.name }}
+        onOk={deleteCurrentProject}
+        onCancel={() => {
+          if (deleteMutation.isPending) return
+          setDeleteOpen(false)
+          setDeleteName('')
+        }}
+        closable={!deleteMutation.isPending}
+        maskClosable={!deleteMutation.isPending}
+      >
+        <Alert
+          showIcon
+          type="error"
+          message="删除后无法恢复"
+          description="该科目下的任务、成员关系和文件都将被永久删除。"
+          style={{ marginBottom: 16 }}
+        />
+        <Typography.Paragraph>
+          请输入科目名称 <Typography.Text strong>{detail.name}</Typography.Text> 以确认：
+        </Typography.Paragraph>
+        <Input
+          value={deleteName}
+          onChange={(event) => setDeleteName(event.target.value)}
+          placeholder={detail.name}
+          disabled={deleteMutation.isPending}
+          autoComplete="off"
+        />
       </Modal>
 
       <CreateTaskModal

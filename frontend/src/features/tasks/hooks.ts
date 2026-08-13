@@ -4,6 +4,7 @@ import { notificationQueryKeys } from '../notifications/hooks'
 import {
   addTaskMember,
   createTask,
+  deleteTask,
   getTask,
   listTaskMembers,
   listTasks,
@@ -72,6 +73,22 @@ export function useCreateTask(projectId: string) {
       )
       void queryClient.invalidateQueries({ queryKey: taskQueryKeys.projectTasks(projectId) })
       void invalidateDeadlineDashboard(queryClient)
+    },
+  })
+}
+
+export function useDeleteTask(taskId: string, projectId: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: () => deleteTask(taskId),
+    async onSuccess() {
+      queryClient.removeQueries({ queryKey: taskQueryKeys.detail(taskId) })
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: taskQueryKeys.projectTasks(projectId) }),
+        invalidateDeadlineDashboard(queryClient),
+        queryClient.invalidateQueries({ queryKey: ['files', 'index'] }),
+        queryClient.invalidateQueries({ queryKey: ['projects', projectId, 'file-index'] }),
+      ])
     },
   })
 }

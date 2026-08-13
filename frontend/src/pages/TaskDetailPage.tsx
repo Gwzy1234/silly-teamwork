@@ -30,7 +30,7 @@ import {
 import dayjs from 'dayjs'
 import { useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { getApiErrorMessage } from '../api/errors'
+import { ApiError, getApiErrorMessage } from '../api/errors'
 import { FilePanel } from '../features/files/components/FilePanel'
 import { useProject, useProjectMembers } from '../features/projects/hooks'
 import { useTeamMembers } from '../features/teams/hooks'
@@ -43,6 +43,7 @@ import {
 } from '../features/tasks/forms'
 import {
   useAddTaskMember,
+  useDeleteTask,
   useRemoveTaskMember,
   useTask,
   useTaskMembers,
@@ -66,6 +67,7 @@ export function TaskDetailPage() {
   const updateMutation = useUpdateTask(taskId, projectId)
   const statusMutation = useUpdateTaskStatus(taskId, projectId)
   const addMutation = useAddTaskMember(taskId, projectId)
+  const deleteMutation = useDeleteTask(taskId, projectId)
   const removeMutation = useRemoveTaskMember(taskId, projectId)
   const transferMutation = useTransferTaskOwner(taskId, projectId)
   const [editOpen, setEditOpen] = useState(false)
@@ -112,6 +114,20 @@ export function TaskDetailPage() {
   const openEdit = () => {
     editForm.setFieldsValue(taskFormInitialValues(detail))
     setEditOpen(true)
+  }
+
+  const deleteCurrentTask = async () => {
+    try {
+      await deleteMutation.mutateAsync()
+      message.success('任务已删除')
+      navigate(`/projects/${detail.project_id}/tasks`, { replace: true })
+    } catch (error) {
+      message.error(
+        error instanceof ApiError && error.status === 403
+          ? '无权限删除该任务'
+          : getApiErrorMessage(error),
+      )
+    }
   }
 
   return (
@@ -200,6 +216,29 @@ export function TaskDetailPage() {
         ) : (
           <Empty description="暂无任务成员" image={Empty.PRESENTED_IMAGE_SIMPLE} />
         )}
+      </Card>
+
+      <Card className="content-card danger-zone-card" title="危险操作">
+        <Flex justify="space-between" align="center" gap={16} wrap>
+          <div>
+            <Typography.Text strong>删除任务</Typography.Text>
+            <Typography.Paragraph type="secondary" style={{ margin: '4px 0 0' }}>
+              删除后，任务成员和任务附件也会被永久清理，且无法恢复。
+            </Typography.Paragraph>
+          </div>
+          <Popconfirm
+            title="确认删除此任务？"
+            description="删除后无法恢复。"
+            okText="确认删除"
+            cancelText="取消"
+            okButtonProps={{ danger: true, loading: deleteMutation.isPending }}
+            onConfirm={deleteCurrentTask}
+          >
+            <Button danger icon={<DeleteOutlined />} loading={deleteMutation.isPending}>
+              删除任务
+            </Button>
+          </Popconfirm>
+        </Flex>
       </Card>
 
       <Modal

@@ -1,7 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { dashboardQueryKeys } from '../dashboard/hooks'
+import { notificationQueryKeys } from '../notifications/hooks'
 import {
   createTeam,
   createTeamInvitation,
+  deleteTeam,
   getTeam,
   joinTeam,
   listTeamMembers,
@@ -47,6 +50,25 @@ export function useJoinTeam() {
   return useMutation({
     mutationFn: joinTeam,
     onSuccess: () => queryClient.invalidateQueries({ queryKey: teamQueryKeys.all }),
+  })
+}
+
+export function useDeleteTeam(teamId: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: () => deleteTeam(teamId),
+    async onSuccess() {
+      queryClient.removeQueries({ queryKey: teamQueryKeys.detail(teamId) })
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: teamQueryKeys.all }),
+        queryClient.invalidateQueries({ queryKey: ['projects'] }),
+        queryClient.invalidateQueries({ queryKey: ['tasks'] }),
+        queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.upcomingRoot }),
+        queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.overdue }),
+        queryClient.invalidateQueries({ queryKey: notificationQueryKeys.all }),
+        queryClient.invalidateQueries({ queryKey: ['files', 'index'] }),
+      ])
+    },
   })
 }
 
