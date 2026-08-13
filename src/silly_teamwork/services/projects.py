@@ -10,6 +10,7 @@ from silly_teamwork.models.project import Project
 from silly_teamwork.models.project_member import ProjectMember
 from silly_teamwork.models.user import User
 from silly_teamwork.repositories import (
+    files,
     project_members,
     projects,
     task_members,
@@ -28,6 +29,7 @@ from silly_teamwork.services.exceptions import (
     ProjectNotFoundError,
     TeamNotFoundError,
 )
+from silly_teamwork.services.file_cleanup import FileCleanupService
 
 PROJECT_TRANSITIONS: dict[ProjectStatus, frozenset[ProjectStatus]] = {
     ProjectStatus.PLANNING: frozenset({ProjectStatus.ACTIVE, ProjectStatus.ARCHIVED}),
@@ -38,8 +40,13 @@ PROJECT_TRANSITIONS: dict[ProjectStatus, frozenset[ProjectStatus]] = {
 
 
 class ProjectService:
-    def __init__(self, access_service: CollaborationAccessService | None = None) -> None:
+    def __init__(
+        self,
+        access_service: CollaborationAccessService | None = None,
+        cleanup_service: FileCleanupService | None = None,
+    ) -> None:
         self.access = access_service or CollaborationAccessService()
+        self.cleanup = cleanup_service or FileCleanupService()
 
     async def create_project(
         self,
@@ -142,6 +149,27 @@ class ProjectService:
             await session.rollback()
             raise
         return project
+
+    async def delete_project(
+        self, session: AsyncSession, current_user: User, project_id: UUID
+    ) -> None:
+        project = await projects.get_by_id(session, project_id)
+        if project is None:
+            raise ProjectNotFoundError("Project not found")
+        if not await self.access.can_delete_project(session, current_user, project_id):
+            raise ProjectAccessDeniedError("Project deletion permission required")
+
+        project_files = await files.list_all_for_project(session, project_id)
+        cleanup_batch = await self.cleanup.stage(file.storage_key for file in project_files)
+        try:
+            await projects.delete(session, project)
+            await session.flush()
+            await session.commit()
+        except Exception:
+            await session.rollback()
+            await self.cleanup.restore(cleanup_batch)
+            raise
+        await self.cleanup.finish(cleanup_batch)
 
     async def list_members(
         self, session: AsyncSession, current_user: User, project_id: UUID

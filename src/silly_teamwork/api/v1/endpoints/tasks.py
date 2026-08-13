@@ -132,6 +132,28 @@ async def update_task(
     return TaskResponse.model_validate(task)
 
 
+@router.delete(
+    "/{task_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Delete a task",
+    responses={
+        403: {"description": "Task deletion permission required"},
+        404: {"description": "Task not found"},
+    },
+)
+async def delete_task(
+    task_id: UUID,
+    session: DbSession,
+    current_user: CurrentUser,
+    task_service: TaskServiceDep,
+) -> Response:
+    try:
+        await task_service.delete_task(session, current_user, task_id)
+    except Exception as error:
+        _raise_task_http_error(error)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
 @router.patch(
     "/{task_id}/status",
     response_model=TaskResponse,

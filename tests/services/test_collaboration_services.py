@@ -8,6 +8,7 @@ import pytest_asyncio
 from sqlalchemy import event, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
+from silly_teamwork.core.file_storage import LocalFileStorage
 from silly_teamwork.db.base import Base
 from silly_teamwork.models import (
     File,
@@ -35,8 +36,10 @@ from silly_teamwork.services.exceptions import (
     ProjectNotFoundError,
     TaskAccessDeniedError,
 )
+from silly_teamwork.services.file_cleanup import FileCleanupService
 from silly_teamwork.services.projects import ProjectService
 from silly_teamwork.services.tasks import TaskService
+from silly_teamwork.services.teams import TeamService
 
 
 @dataclass(frozen=True, slots=True)
@@ -273,6 +276,129 @@ async def test_file_control_matrix(collaboration_context: CollaborationContext) 
             assert await access.can_delete_file(session, actor, ctx.project_file_id)
         assert not await access.can_modify_file(session, reviewer, ctx.project_file_id)
         assert await access.can_delete_file(session, admin, ctx.task_file_id)
+
+        assert await access.can_delete_task(session, leader, ctx.task_id)
+        assert await access.can_delete_task(session, owner, ctx.task_id)
+        assert await access.can_delete_task(session, admin, ctx.task_id)
+        assert not await access.can_delete_task(session, uploader, ctx.task_id)
+        assert not await access.can_delete_task(session, reviewer, ctx.task_id)
+
+        assert await access.can_delete_project(session, leader, ctx.project_id)
+        assert await access.can_delete_project(session, admin, ctx.project_id)
+        assert not await access.can_delete_project(session, owner, ctx.project_id)
+        assert not await access.can_delete_project(session, uploader, ctx.project_id)
+
+        assert await access.can_delete_team(session, leader, ctx.team_id)
+        assert await access.can_delete_team(session, admin, ctx.team_id)
+        assert not await access.can_delete_team(session, owner, ctx.team_id)
+        assert not await access.can_delete_team(session, uploader, ctx.team_id)
+
+
+@pytest.mark.asyncio
+async def test_task_delete_restores_physical_files_when_commit_fails(
+    collaboration_context: CollaborationContext,
+    tmp_path: Path,
+) -> None:
+    ctx = collaboration_context
+    storage = LocalFileStorage(tmp_path / "uploads")
+    stored_path = storage.resolve("tests/slides.pptx")
+    stored_path.parent.mkdir(parents=True, exist_ok=True)
+    stored_path.write_bytes(b"slides")
+    service = TaskService(cleanup_service=FileCleanupService(storage))
+
+    async with ctx.session_factory() as session:
+        project_owner = await _user(session, ctx.project_owner_id)
+
+        def fail_commit(_: object) -> None:
+            raise RuntimeError("simulated commit failure")
+
+        event.listen(session.sync_session, "before_commit", fail_commit)
+        try:
+            with pytest.raises(RuntimeError, match="simulated commit failure"):
+                await service.delete_task(session, project_owner, ctx.task_id)
+        finally:
+            event.remove(session.sync_session, "before_commit", fail_commit)
+
+    assert stored_path.read_bytes() == b"slides"
+    assert not list(stored_path.parent.glob(".*.deleting-*"))
+    async with ctx.session_factory() as session:
+        assert await session.get(Task, ctx.task_id) is not None
+        assert await session.get(File, ctx.task_file_id) is not None
+
+
+@pytest.mark.asyncio
+async def test_project_delete_restores_all_physical_files_when_commit_fails(
+    collaboration_context: CollaborationContext,
+    tmp_path: Path,
+) -> None:
+    ctx = collaboration_context
+    storage = LocalFileStorage(tmp_path / "uploads")
+    project_path = storage.resolve("tests/project-notes.txt")
+    task_path = storage.resolve("tests/slides.pptx")
+    project_path.parent.mkdir(parents=True, exist_ok=True)
+    project_path.write_bytes(b"notes")
+    task_path.write_bytes(b"slides")
+    service = ProjectService(cleanup_service=FileCleanupService(storage))
+
+    async with ctx.session_factory() as session:
+        leader = await _user(session, ctx.leader_id)
+
+        def fail_commit(_: object) -> None:
+            raise RuntimeError("simulated project commit failure")
+
+        event.listen(session.sync_session, "before_commit", fail_commit)
+        try:
+            with pytest.raises(RuntimeError, match="simulated project commit failure"):
+                await service.delete_project(session, leader, ctx.project_id)
+        finally:
+            event.remove(session.sync_session, "before_commit", fail_commit)
+
+    assert project_path.read_bytes() == b"notes"
+    assert task_path.read_bytes() == b"slides"
+    assert not list(project_path.parent.glob(".*.deleting-*"))
+    async with ctx.session_factory() as session:
+        assert await session.get(Project, ctx.project_id) is not None
+        assert await session.get(Task, ctx.task_id) is not None
+        assert await session.get(File, ctx.project_file_id) is not None
+        assert await session.get(File, ctx.task_file_id) is not None
+
+
+@pytest.mark.asyncio
+async def test_team_delete_restores_entire_tree_and_files_when_commit_fails(
+    collaboration_context: CollaborationContext,
+    tmp_path: Path,
+) -> None:
+    ctx = collaboration_context
+    storage = LocalFileStorage(tmp_path / "uploads")
+    project_path = storage.resolve("tests/project-notes.txt")
+    task_path = storage.resolve("tests/slides.pptx")
+    project_path.parent.mkdir(parents=True, exist_ok=True)
+    project_path.write_bytes(b"notes")
+    task_path.write_bytes(b"slides")
+    service = TeamService(cleanup_service=FileCleanupService(storage))
+
+    async with ctx.session_factory() as session:
+        leader = await _user(session, ctx.leader_id)
+
+        def fail_commit(_: object) -> None:
+            raise RuntimeError("simulated team commit failure")
+
+        event.listen(session.sync_session, "before_commit", fail_commit)
+        try:
+            with pytest.raises(RuntimeError, match="simulated team commit failure"):
+                await service.delete_team(session, leader, ctx.team_id)
+        finally:
+            event.remove(session.sync_session, "before_commit", fail_commit)
+
+    assert project_path.read_bytes() == b"notes"
+    assert task_path.read_bytes() == b"slides"
+    assert not list(project_path.parent.glob(".*.deleting-*"))
+    async with ctx.session_factory() as session:
+        assert await session.get(Team, ctx.team_id) is not None
+        assert await session.get(Project, ctx.project_id) is not None
+        assert await session.get(Task, ctx.task_id) is not None
+        assert await session.get(File, ctx.project_file_id) is not None
+        assert await session.get(File, ctx.task_file_id) is not None
 
 
 @pytest.mark.asyncio

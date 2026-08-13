@@ -13,14 +13,16 @@ from silly_teamwork.models.invitation_code import InvitationCode
 from silly_teamwork.models.team import Team
 from silly_teamwork.models.team_member import TeamMember
 from silly_teamwork.models.user import User
-from silly_teamwork.repositories import invitation_codes, team_members, teams
+from silly_teamwork.repositories import files, invitation_codes, team_members, teams
 from silly_teamwork.schemas.team import InvitationCreateRequest, InvitationRole, TeamCreateRequest
+from silly_teamwork.services.collaboration_access import CollaborationAccessService
 from silly_teamwork.services.exceptions import (
     AlreadyTeamMemberError,
     InvalidInvitationError,
     TeamAccessDeniedError,
     TeamNotFoundError,
 )
+from silly_teamwork.services.file_cleanup import FileCleanupService
 
 
 @dataclass(frozen=True, slots=True)
@@ -43,6 +45,14 @@ class CreatedInvitation:
 
 
 class TeamService:
+    def __init__(
+        self,
+        access_service: CollaborationAccessService | None = None,
+        cleanup_service: FileCleanupService | None = None,
+    ) -> None:
+        self.access = access_service or CollaborationAccessService()
+        self.cleanup = cleanup_service or FileCleanupService()
+
     async def create_team(
         self, session: AsyncSession, current_user: User, payload: TeamCreateRequest
     ) -> TeamWithRole:
@@ -81,6 +91,27 @@ class TeamService:
         return TeamWithRole(team=team, role=membership.role), [
             TeamMemberWithUser(membership=item, user=user) for item, user in members
         ]
+
+    async def delete_team(
+        self, session: AsyncSession, current_user: User, team_id: UUID
+    ) -> None:
+        team = await teams.get_by_id(session, team_id)
+        if team is None:
+            raise TeamNotFoundError("Team not found")
+        if not await self.access.can_delete_team(session, current_user, team_id):
+            raise TeamAccessDeniedError("Team deletion permission required")
+
+        team_files = await files.list_all_for_team(session, team_id)
+        cleanup_batch = await self.cleanup.stage(file.storage_key for file in team_files)
+        try:
+            await teams.delete(session, team)
+            await session.flush()
+            await session.commit()
+        except Exception:
+            await session.rollback()
+            await self.cleanup.restore(cleanup_batch)
+            raise
+        await self.cleanup.finish(cleanup_batch)
 
     async def list_members(
         self, session: AsyncSession, current_user: User, team_id: UUID

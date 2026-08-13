@@ -10,7 +10,14 @@ from silly_teamwork.models.project_member import ProjectMember
 from silly_teamwork.models.task import Task
 from silly_teamwork.models.task_member import TaskMember
 from silly_teamwork.models.user import User
-from silly_teamwork.repositories import project_members, projects, task_members, tasks, team_members
+from silly_teamwork.repositories import (
+    files,
+    project_members,
+    projects,
+    task_members,
+    tasks,
+    team_members,
+)
 from silly_teamwork.schemas.task import TaskCreate, TaskMemberAdd, TaskUpdate
 from silly_teamwork.services.collaboration_access import CollaborationAccessService
 from silly_teamwork.services.exceptions import (
@@ -24,6 +31,7 @@ from silly_teamwork.services.exceptions import (
     TaskMemberNotFoundError,
     TaskNotFoundError,
 )
+from silly_teamwork.services.file_cleanup import FileCleanupService
 
 TASK_TRANSITIONS: dict[TaskStatus, frozenset[TaskStatus]] = {
     TaskStatus.TODO: frozenset({TaskStatus.IN_PROGRESS, TaskStatus.CANCELLED}),
@@ -52,8 +60,10 @@ class TaskService:
     def __init__(
         self,
         access_service: CollaborationAccessService | None = None,
+        cleanup_service: FileCleanupService | None = None,
     ) -> None:
         self.access = access_service or CollaborationAccessService()
+        self.cleanup = cleanup_service or FileCleanupService()
 
     async def create_task(
         self,
@@ -129,6 +139,27 @@ class TaskService:
             await session.rollback()
             raise
         return task
+
+    async def delete_task(
+        self, session: AsyncSession, current_user: User, task_id: UUID
+    ) -> None:
+        task = await tasks.get_by_id(session, task_id)
+        if task is None:
+            raise TaskNotFoundError("Task not found")
+        if not await self.access.can_delete_task(session, current_user, task_id):
+            raise TaskAccessDeniedError("Task deletion permission required")
+
+        task_files = await files.list_task_files(session, task_id)
+        cleanup_batch = await self.cleanup.stage(file.storage_key for file in task_files)
+        try:
+            await tasks.delete(session, task)
+            await session.flush()
+            await session.commit()
+        except Exception:
+            await session.rollback()
+            await self.cleanup.restore(cleanup_batch)
+            raise
+        await self.cleanup.finish(cleanup_batch)
 
     async def change_status(
         self,

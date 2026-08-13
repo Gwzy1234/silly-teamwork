@@ -34,6 +34,7 @@ from silly_teamwork.services.exceptions import (
     ProjectNotFoundError,
     TaskNotFoundError,
 )
+from silly_teamwork.services.file_cleanup import FileCleanupService
 
 UPLOAD_CHUNK_SIZE = 1024 * 1024
 
@@ -56,11 +57,13 @@ class FileService:
         self,
         access_service: CollaborationAccessService | None = None,
         storage: LocalFileStorage | None = None,
+        cleanup_service: FileCleanupService | None = None,
         max_file_size: int | None = None,
     ) -> None:
         settings = get_settings()
         self.access = access_service or CollaborationAccessService()
         self.storage = storage or LocalFileStorage(settings.upload_dir)
+        self.cleanup = cleanup_service or FileCleanupService(self.storage)
         self.max_file_size = max_file_size or settings.max_file_size
 
     async def upload_project_file(
@@ -227,16 +230,16 @@ class FileService:
         file = await self._require_file(session, file_id)
         if not await self.access.can_delete_file(session, current_user, file_id):
             raise FileAccessDeniedError("File deletion permission required")
-        staged = await asyncio.to_thread(self.storage.stage_delete, file.storage_key)
+        cleanup_batch = await self.cleanup.stage([file.storage_key])
         try:
             await files.delete_file(session, file)
             await session.flush()
             await session.commit()
         except Exception:
             await session.rollback()
-            await asyncio.to_thread(self.storage.restore_staged_delete, staged)
+            await self.cleanup.restore(cleanup_batch)
             raise
-        await asyncio.to_thread(self.storage.finish_staged_delete, staged)
+        await self.cleanup.finish(cleanup_batch)
 
     async def _persist_upload(
         self,

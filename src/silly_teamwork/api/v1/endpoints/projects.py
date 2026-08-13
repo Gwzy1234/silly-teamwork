@@ -130,6 +130,28 @@ async def update_project(
     return ProjectResponse.model_validate(project)
 
 
+@router.delete(
+    "/{project_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Permanently delete a project",
+    responses={
+        403: {"description": "Project deletion permission required"},
+        404: {"description": "Project not found"},
+    },
+)
+async def delete_project(
+    project_id: UUID,
+    session: DbSession,
+    current_user: CurrentUser,
+    project_service: ProjectServiceDep,
+) -> Response:
+    try:
+        await project_service.delete_project(session, current_user, project_id)
+    except Exception as error:
+        _raise_project_http_error(error)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
 @router.patch(
     "/{project_id}/status",
     response_model=ProjectResponse,

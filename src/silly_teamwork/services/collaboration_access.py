@@ -16,6 +16,7 @@ from silly_teamwork.repositories import (
     task_members,
     tasks,
     team_members,
+    teams,
 )
 from silly_teamwork.services.exceptions import (
     FileNotFoundError,
@@ -123,6 +124,16 @@ class CollaborationAccessService:
         )
         return membership is not None and membership.role is ProjectRole.OWNER
 
+    async def can_delete_project(
+        self, session: AsyncSession, current_user: User, project_id: UUID
+    ) -> bool:
+        project = await projects.get_by_id(session, project_id)
+        if project is None:
+            return False
+        if await system_admins.get_by_user_id(session, current_user.id) is not None:
+            return True
+        return await self._is_team_leader(session, project.team_id, current_user.id)
+
     async def can_manage_task(
         self, session: AsyncSession, current_user: User, task_id: UUID
     ) -> bool:
@@ -143,6 +154,27 @@ class CollaborationAccessService:
             session, task.id, current_user.id
         )
         return task_membership is not None and task_membership.role is TaskRole.OWNER
+
+    async def can_delete_task(
+        self, session: AsyncSession, current_user: User, task_id: UUID
+    ) -> bool:
+        task = await tasks.get_by_id(session, task_id)
+        if task is None:
+            return False
+        if await system_admins.get_by_user_id(session, current_user.id) is not None:
+            return True
+        project = await projects.get_by_id(session, task.project_id)
+        if project is None:
+            return False
+        if await self._is_team_leader(session, project.team_id, current_user.id):
+            return True
+        project_membership = await project_members.get_by_project_and_user(
+            session, project.id, current_user.id
+        )
+        return (
+            project_membership is not None
+            and project_membership.role is ProjectRole.OWNER
+        )
 
     async def can_upload_project_file(
         self, session: AsyncSession, current_user: User, project_id: UUID
@@ -170,6 +202,15 @@ class CollaborationAccessService:
     async def is_team_leader(
         self, session: AsyncSession, current_user: User, team_id: UUID
     ) -> bool:
+        return await self._is_team_leader(session, team_id, current_user.id)
+
+    async def can_delete_team(
+        self, session: AsyncSession, current_user: User, team_id: UUID
+    ) -> bool:
+        if await teams.get_by_id(session, team_id) is None:
+            return False
+        if await system_admins.get_by_user_id(session, current_user.id) is not None:
+            return True
         return await self._is_team_leader(session, team_id, current_user.id)
 
     async def _can_access_project_record(

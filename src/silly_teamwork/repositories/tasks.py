@@ -14,6 +14,10 @@ def add(session: AsyncSession, task: Task) -> None:
     session.add(task)
 
 
+async def delete(session: AsyncSession, task: Task) -> None:
+    await session.delete(task)
+
+
 async def get_by_id(session: AsyncSession, task_id: UUID) -> Task | None:
     return await session.get(Task, task_id)
 

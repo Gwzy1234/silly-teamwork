@@ -11,6 +11,10 @@ def add(session: AsyncSession, project: Project) -> None:
     session.add(project)
 
 
+async def delete(session: AsyncSession, project: Project) -> None:
+    await session.delete(project)
+
+
 async def get_by_id(session: AsyncSession, project_id: UUID) -> Project | None:
     return await session.get(Project, project_id)
 

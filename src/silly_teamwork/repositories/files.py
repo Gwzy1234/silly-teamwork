@@ -47,6 +47,30 @@ async def list_task_files(session: AsyncSession, task_id: UUID) -> list[File]:
     return list(result.scalars().all())
 
 
+async def list_all_for_project(session: AsyncSession, project_id: UUID) -> list[File]:
+    result = await session.execute(
+        select(File)
+        .outerjoin(Task, File.task_id == Task.id)
+        .where(or_(File.project_id == project_id, Task.project_id == project_id))
+        .order_by(File.created_at.desc(), File.id)
+    )
+    return list(result.scalars().all())
+
+
+async def list_all_for_team(session: AsyncSession, team_id: UUID) -> list[File]:
+    result = await session.execute(
+        select(File)
+        .outerjoin(Task, File.task_id == Task.id)
+        .join(
+            Project,
+            or_(File.project_id == Project.id, Task.project_id == Project.id),
+        )
+        .where(Project.team_id == team_id)
+        .order_by(File.created_at.desc(), File.id)
+    )
+    return list(result.scalars().all())
+
+
 async def delete_file(session: AsyncSession, file: File) -> None:
     await session.delete(file)
 

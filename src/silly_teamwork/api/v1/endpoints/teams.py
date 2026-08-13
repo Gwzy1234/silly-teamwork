@@ -2,7 +2,7 @@
 
 from uuid import UUID
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, Response, status
 
 from silly_teamwork.api.dependencies import CurrentUser, DbSession, TeamServiceDep
 from silly_teamwork.schemas.team import (
@@ -118,6 +118,30 @@ async def get_team_detail(
     return TeamDetailResponse(
         **base.model_dump(), members=[_member_response(item) for item in members]
     )
+
+
+@router.delete(
+    "/{team_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Permanently delete a team",
+    responses={
+        403: {"description": "Team deletion permission required"},
+        404: {"description": "Team not found"},
+    },
+)
+async def delete_team(
+    team_id: UUID,
+    session: DbSession,
+    current_user: CurrentUser,
+    team_service: TeamServiceDep,
+) -> Response:
+    try:
+        await team_service.delete_team(session, current_user, team_id)
+    except TeamNotFoundError as error:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(error)) from error
+    except TeamAccessDeniedError as error:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(error)) from error
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.post(

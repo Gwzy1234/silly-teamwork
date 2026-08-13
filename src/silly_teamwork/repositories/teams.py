@@ -20,6 +20,10 @@ def add(session: AsyncSession, team: Team) -> None:
     session.add(team)
 
 
+async def delete(session: AsyncSession, team: Team) -> None:
+    await session.delete(team)
+
+
 async def get_by_id(session: AsyncSession, team_id: UUID) -> Team | None:
     return await session.get(Team, team_id)
 
