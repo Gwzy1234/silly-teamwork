@@ -2,8 +2,16 @@ import {
   DeleteOutlined,
   DownloadOutlined,
   EditOutlined,
+  FileExcelOutlined,
+  FileImageOutlined,
   FileOutlined,
+  FilePdfOutlined,
+  FilePptOutlined,
+  FileTextOutlined,
+  FileWordOutlined,
+  FileZipOutlined,
   InboxOutlined,
+  SearchOutlined,
 } from '@ant-design/icons'
 import {
   Alert,
@@ -22,8 +30,9 @@ import {
 } from 'antd'
 import type { UploadProps } from 'antd'
 import dayjs from 'dayjs'
-import { useState } from 'react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { getApiErrorMessage } from '../../../api/errors'
+import { useCurrentUser } from '../../auth/hooks'
 import {
   useCollaborationFiles,
   useDeleteFile,
@@ -40,6 +49,28 @@ function formatFileSize(bytes: number) {
   return `${(bytes / 1024 / 1024 / 1024).toFixed(1)} GB`
 }
 
+function fileIcon(file: CollaborationFile): ReactNode {
+  const contentType = file.content_type.toLowerCase()
+  const extension = file.original_name.split('.').pop()?.toLowerCase()
+
+  if (contentType.includes('pdf') || extension === 'pdf') return <FilePdfOutlined />
+  if (contentType.startsWith('image/')) return <FileImageOutlined />
+  if (contentType.includes('word') || ['doc', 'docx'].includes(extension || '')) {
+    return <FileWordOutlined />
+  }
+  if (contentType.includes('sheet') || ['xls', 'xlsx', 'csv'].includes(extension || '')) {
+    return <FileExcelOutlined />
+  }
+  if (contentType.includes('presentation') || ['ppt', 'pptx'].includes(extension || '')) {
+    return <FilePptOutlined />
+  }
+  if (contentType.includes('zip') || ['zip', 'rar', '7z', 'tar', 'gz'].includes(extension || '')) {
+    return <FileZipOutlined />
+  }
+  if (contentType.startsWith('text/')) return <FileTextOutlined />
+  return <FileOutlined />
+}
+
 interface FilePanelProps {
   scope: FileScope
   ownerId: string
@@ -48,13 +79,37 @@ interface FilePanelProps {
 
 export function FilePanel({ scope, ownerId, title = '文件' }: FilePanelProps) {
   const { message } = App.useApp()
+  const currentUser = useCurrentUser()
   const files = useCollaborationFiles(scope, ownerId)
   const uploadMutation = useUploadFile(scope, ownerId)
   const updateMutation = useUpdateFileMetadata(scope, ownerId)
   const deleteMutation = useDeleteFile(scope, ownerId)
   const downloadMutation = useDownloadFile()
   const [editingFile, setEditingFile] = useState<CollaborationFile | null>(null)
+  const [searchInput, setSearchInput] = useState('')
+  const [searchQuery, setSearchQuery] = useState('')
   const [renameForm] = Form.useForm<{ original_name: string }>()
+
+  useEffect(() => {
+    const timeout = window.setTimeout(() => setSearchQuery(searchInput.trim().toLowerCase()), 350)
+    return () => window.clearTimeout(timeout)
+  }, [searchInput])
+
+  const visibleFiles = useMemo(() => {
+    const sortedFiles = [...(files.data ?? [])].sort(
+      (left, right) => dayjs(right.created_at).valueOf() - dayjs(left.created_at).valueOf(),
+    )
+    if (!searchQuery) return sortedFiles
+    return sortedFiles.filter((file) => file.original_name.toLowerCase().includes(searchQuery))
+  }, [files.data, searchQuery])
+
+  const uploaderName = (file: CollaborationFile) => {
+    if (!file.uploaded_by_id) return '已注销用户'
+    if (file.uploaded_by_id === currentUser.data?.id) {
+      return currentUser.data.nickname || currentUser.data.username
+    }
+    return `用户 ${file.uploaded_by_id.slice(0, 8)}`
+  }
 
   const runAction = async (action: () => Promise<unknown>, success: string) => {
     try {
@@ -111,10 +166,23 @@ export function FilePanel({ scope, ownerId, title = '文件' }: FilePanelProps) 
         <p className="ant-upload-hint">文件访问和操作权限由后端统一校验</p>
       </Upload.Dragger>
 
-      <Flex justify="space-between" align="center">
+      <Flex justify="space-between" align="center" gap={12} wrap>
         <Typography.Title level={5} style={{ margin: 0 }}>{title}</Typography.Title>
-        <Typography.Text type="secondary">共 {files.data?.length ?? 0} 个</Typography.Text>
+        <Typography.Text type="secondary">
+          {searchQuery ? `找到 ${visibleFiles.length} 个，共 ${files.data?.length ?? 0} 个` : `共 ${files.data?.length ?? 0} 个`}
+        </Typography.Text>
       </Flex>
+
+      <Input
+        allowClear
+        size="large"
+        className="task-file-search"
+        prefix={<SearchOutlined />}
+        value={searchInput}
+        placeholder="搜索当前任务附件"
+        aria-label="搜索当前任务附件"
+        onChange={(event) => setSearchInput(event.target.value)}
+      />
 
       {files.isError ? (
         <Alert
@@ -123,12 +191,14 @@ export function FilePanel({ scope, ownerId, title = '文件' }: FilePanelProps) 
           message="文件列表加载失败"
           action={<Button onClick={() => files.refetch()}>重试</Button>}
         />
-      ) : files.data?.length ? (
+      ) : visibleFiles.length ? (
         <List
+          className="task-file-list"
           loading={files.isPending}
-          dataSource={files.data}
+          dataSource={visibleFiles}
           renderItem={(file) => (
             <List.Item
+              className="task-file-list-item"
               actions={[
                 <Button
                   key="download"
@@ -159,13 +229,17 @@ export function FilePanel({ scope, ownerId, title = '文件' }: FilePanelProps) 
               ]}
             >
               <List.Item.Meta
-                avatar={<FileOutlined className="file-list-icon" />}
-                title={file.original_name}
+                avatar={<span className="task-file-icon">{fileIcon(file)}</span>}
+                title={
+                  <Typography.Text strong ellipsis={{ tooltip: file.original_name }}>
+                    {file.original_name}
+                  </Typography.Text>
+                }
                 description={
-                  <Space size="middle" wrap>
+                  <Space className="task-file-meta" size={[12, 4]} wrap>
                     <span>{formatFileSize(file.size_bytes)}</span>
-                    <span>{file.content_type || '未知类型'}</span>
-                    <span>上传于 {dayjs(file.created_at).format('YYYY-MM-DD HH:mm')}</span>
+                    <span>上传者：{uploaderName(file)}</span>
+                    <span>{dayjs(file.created_at).format('YYYY-MM-DD HH:mm')}</span>
                   </Space>
                 }
               />
@@ -173,7 +247,10 @@ export function FilePanel({ scope, ownerId, title = '文件' }: FilePanelProps) 
           )}
         />
       ) : files.isPending ? null : (
-        <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂未上传文件" />
+        <Empty
+          image={Empty.PRESENTED_IMAGE_SIMPLE}
+          description={searchQuery ? '没有匹配的任务附件' : '暂未上传文件'}
+        />
       )}
 
       <Modal

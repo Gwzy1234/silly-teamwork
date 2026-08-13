@@ -1,6 +1,11 @@
 import { apiClient } from '../../api/client'
 import { createApiError } from '../../api/errors'
-import type { CollaborationFile, FileIndexItem, FileMetadataUpdate } from './types'
+import type {
+  CollaborationFile,
+  FileIndexItem,
+  FileMetadataUpdate,
+  ProjectFileIndex,
+} from './types'
 
 const multipartSerializer = (body: { file: File }) => {
   const formData = new FormData()
@@ -42,6 +47,23 @@ export async function listFileIndex(query?: string): Promise<FileIndexItem[]> {
   const { data, error, response } = await apiClient.GET('/api/v1/files/index', {
     params: { query: query ? { q: query } : {} },
   })
+  if (!data) throw createApiError(response, error)
+  return data
+}
+
+export async function getProjectFileIndex(
+  projectId: string,
+  query?: string,
+): Promise<ProjectFileIndex> {
+  const { data, error, response } = await apiClient.GET(
+    '/api/v1/projects/{project_id}/file-index',
+    {
+      params: {
+        path: { project_id: projectId },
+        query: query ? { q: query } : {},
+      },
+    },
+  )
   if (!data) throw createApiError(response, error)
   return data
 }

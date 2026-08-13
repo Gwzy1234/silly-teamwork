@@ -33,7 +33,7 @@ import dayjs from 'dayjs'
 import { useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { getApiErrorMessage } from '../api/errors'
-import { FilePanel } from '../features/files/components/FilePanel'
+import { ProjectFileIndexPanel } from '../features/files/components/ProjectFileIndexPanel'
 import { ProjectForm } from '../features/projects/components/ProjectForm'
 import { projectStatusOptions } from '../features/projects/constants'
 import {
@@ -173,7 +173,7 @@ export function ProjectDetailPage() {
             {
               key: 'files',
               label: '文件',
-              children: <FilePanel scope="project" ownerId={projectId} title="科目文件" />,
+              children: <ProjectFileIndexPanel projectId={projectId} />,
             },
           ]}
         />

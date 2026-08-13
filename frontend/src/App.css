@@ -349,6 +349,47 @@
   min-height: 40px;
 }
 
+.project-file-index {
+  min-width: 0;
+}
+
+.project-file-index-sections {
+  border: 0;
+  background: transparent;
+}
+
+.project-file-index-sections > .ant-collapse-item {
+  background: #fafcff;
+}
+
+.task-file-search {
+  max-width: 560px;
+}
+
+.task-file-list-item {
+  min-width: 0;
+  padding: 14px 0 !important;
+}
+
+.task-file-list-item .ant-list-item-meta {
+  min-width: 0;
+}
+
+.task-file-icon {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  border-radius: 11px;
+  color: #1677ff;
+  font-size: 21px;
+  background: #eaf3ff;
+}
+
+.task-file-meta {
+  color: rgba(0, 0, 0, 0.45);
+}
+
 .notification-item {
   padding: 18px 16px !important;
   border-radius: 12px;
@@ -598,5 +639,40 @@
 
   .file-pool-download .anticon {
     font-size: 18px;
+  }
+
+  .project-file-index .ant-input-affix-wrapper-lg {
+    min-height: 44px;
+  }
+
+  .task-file-search {
+    max-width: none;
+    min-height: 44px;
+  }
+
+  .task-file-list-item {
+    align-items: flex-start !important;
+    gap: 10px;
+  }
+
+  .task-file-list-item .ant-list-item-action {
+    display: flex;
+    flex: 0 0 auto;
+    margin-inline-start: 4px;
+  }
+
+  .task-file-list-item .ant-list-item-action > li {
+    padding-inline: 2px;
+  }
+
+  .task-file-list-item .ant-list-item-action .ant-btn {
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    font-size: 0;
+  }
+
+  .task-file-list-item .ant-list-item-action .anticon {
+    font-size: 17px;
   }
 }
