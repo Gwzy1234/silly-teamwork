@@ -210,6 +210,20 @@ async def test_task_member_uploads_and_lists_task_files(
     )
     assert response.status_code == 200
     assert [item["id"] for item in response.json()] == [uploaded["id"]]
+    assert response.json()[0]["permissions"] == {
+        "can_modify": True,
+        "can_delete": True,
+    }
+
+    member_response = await file_context.client.get(
+        f"/api/v1/tasks/{file_context.task.id}/files",
+        headers=file_context.headers[file_context.member.id],
+    )
+    assert member_response.status_code == 200
+    assert member_response.json()[0]["permissions"] == {
+        "can_modify": False,
+        "can_delete": False,
+    }
 
 
 async def test_outsider_cannot_upload(file_context: FileApiContext) -> None:

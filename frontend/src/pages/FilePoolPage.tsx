@@ -1,4 +1,5 @@
 import {
+  DeleteOutlined,
   DownloadOutlined,
   FileExcelOutlined,
   FileImageOutlined,
@@ -21,6 +22,7 @@ import {
   Flex,
   Input,
   List,
+  Popconfirm,
   Skeleton,
   Space,
   Tag,
@@ -29,7 +31,11 @@ import {
 import dayjs from 'dayjs'
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { getApiErrorMessage } from '../api/errors'
-import { useDownloadFile, useFileIndex } from '../features/files/hooks'
+import {
+  useDeleteIndexedFile,
+  useDownloadFile,
+  useFileIndex,
+} from '../features/files/hooks'
 import type { FileIndexItem } from '../features/files/types'
 
 interface TaskFileGroup {
@@ -112,6 +118,7 @@ function groupFiles(files: FileIndexItem[]): ProjectFileGroup[] {
 function FileList({ files }: { files: FileIndexItem[] }) {
   const { message } = App.useApp()
   const download = useDownloadFile()
+  const deleteMutation = useDeleteIndexedFile()
 
   const downloadFile = async (file: FileIndexItem) => {
     try {
@@ -119,6 +126,15 @@ function FileList({ files }: { files: FileIndexItem[] }) {
       message.success('文件已开始下载')
     } catch (error) {
       message.error(getApiErrorMessage(error, '文件下载失败'))
+    }
+  }
+
+  const deleteFile = async (file: FileIndexItem) => {
+    try {
+      await deleteMutation.mutateAsync(file.id)
+      message.success('文件已删除')
+    } catch (error) {
+      message.error(getApiErrorMessage(error, '文件删除失败'))
     }
   }
 
@@ -140,6 +156,29 @@ function FileList({ files }: { files: FileIndexItem[] }) {
             >
               下载
             </Button>,
+            ...(file.permissions.can_delete
+              ? [
+                  <Popconfirm
+                    key="delete"
+                    title="确认删除该文件？"
+                    description="删除后无法恢复。"
+                    okText="删除"
+                    cancelText="取消"
+                    okButtonProps={{ danger: true }}
+                    onConfirm={() => deleteFile(file)}
+                  >
+                    <Button
+                      danger
+                      type="text"
+                      className="file-pool-delete"
+                      icon={<DeleteOutlined />}
+                      loading={deleteMutation.isPending && deleteMutation.variables === file.id}
+                    >
+                      删除
+                    </Button>
+                  </Popconfirm>,
+                ]
+              : []),
           ]}
         >
           <List.Item.Meta

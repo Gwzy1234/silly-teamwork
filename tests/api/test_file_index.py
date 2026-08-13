@@ -221,6 +221,25 @@ async def test_global_file_index_filters_by_existing_access_rules_and_time(
     assert [item["id"] for item in task_member_response.json()] == [
         str(context.file_ids["task"])
     ]
+    assert all(
+        item["permissions"] == {"can_modify": True, "can_delete": True}
+        for item in leader_response.json()
+    )
+    project_member_items = {
+        item["id"]: item["permissions"] for item in project_member_response.json()
+    }
+    assert project_member_items[str(context.file_ids["shared"])] == {
+        "can_modify": True,
+        "can_delete": True,
+    }
+    assert project_member_items[str(context.file_ids["task"])] == {
+        "can_modify": False,
+        "can_delete": False,
+    }
+    assert task_member_response.json()[0]["permissions"] == {
+        "can_modify": True,
+        "can_delete": True,
+    }
 
 
 async def test_global_file_index_search_and_basic_filters(
@@ -266,6 +285,10 @@ async def test_global_index_hides_files_from_outsider_and_allows_system_admin(
         str(context.file_ids["task"]),
         str(context.file_ids["hidden"]),
     }
+    assert all(
+        item["permissions"] == {"can_modify": True, "can_delete": True}
+        for item in admin_response.json()
+    )
     assert outsider_response.status_code == 200
     assert outsider_response.json() == []
 
@@ -317,6 +340,14 @@ async def test_project_file_index_groups_shared_and_task_files(
     assert payload["tasks"][0]["files"][0]["uploader"]["username"] == (
         "index_task_member"
     )
+    assert payload["shared_files"][0]["permissions"] == {
+        "can_modify": True,
+        "can_delete": True,
+    }
+    assert payload["tasks"][0]["files"][0]["permissions"] == {
+        "can_modify": False,
+        "can_delete": False,
+    }
 
 
 async def test_project_file_index_rejects_users_without_project_access(

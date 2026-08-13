@@ -19,6 +19,15 @@ class FileResponse(BaseModel):
     updated_at: datetime
 
 
+class FilePermissionsResponse(BaseModel):
+    can_modify: bool
+    can_delete: bool
+
+
+class FileListItemResponse(FileResponse):
+    permissions: FilePermissionsResponse
+
+
 class FileMetadataUpdate(BaseModel):
     original_name: str = Field(min_length=1, max_length=255)
 
@@ -51,7 +60,7 @@ class FileIndexUploaderResponse(BaseModel):
     nickname: str | None
 
 
-class FileIndexItemResponse(FileResponse):
+class FileIndexItemResponse(FileListItemResponse):
     uploaded_at: datetime
     team: FileIndexTeamResponse
     project: FileIndexProjectResponse

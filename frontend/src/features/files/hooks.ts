@@ -1,4 +1,9 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import {
+  useMutation,
+  useQuery,
+  useQueryClient,
+  type UseQueryResult,
+} from '@tanstack/react-query'
 import {
   deleteFile,
   downloadFile,
@@ -10,7 +15,7 @@ import {
   uploadProjectFile,
   uploadTaskFile,
 } from './api'
-import type { FileScope } from './types'
+import type { CollaborationFile, FileRecord, FileScope } from './types'
 
 export const fileQueryKeys = {
   index: (query: string) => ['files', 'index', { query }] as const,
@@ -39,6 +44,14 @@ function scopeQueryKey(scope: FileScope, ownerId: string) {
   return scope === 'project' ? fileQueryKeys.project(ownerId) : fileQueryKeys.task(ownerId)
 }
 
+export function useCollaborationFiles(
+  scope: 'task',
+  ownerId: string,
+): UseQueryResult<CollaborationFile[]>
+export function useCollaborationFiles(
+  scope: 'project',
+  ownerId: string,
+): UseQueryResult<FileRecord[]>
 export function useCollaborationFiles(scope: FileScope, ownerId: string) {
   return useQuery({
     queryKey: scopeQueryKey(scope, ownerId),
@@ -70,7 +83,36 @@ export function useDeleteFile(scope: FileScope, ownerId: string) {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: deleteFile,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: scopeQueryKey(scope, ownerId) }),
+    async onSuccess() {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['files', 'index'] }),
+        queryClient.invalidateQueries({
+          predicate: (query) => query.queryKey[0] === 'projects'
+            && query.queryKey[2] === 'file-index',
+        }),
+        queryClient.invalidateQueries({ queryKey: scopeQueryKey(scope, ownerId) }),
+      ])
+    },
+  })
+}
+
+export function useDeleteIndexedFile() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: deleteFile,
+    async onSuccess() {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['files', 'index'] }),
+        queryClient.invalidateQueries({
+          predicate: (query) => query.queryKey[0] === 'projects'
+            && query.queryKey[2] === 'file-index',
+        }),
+        queryClient.invalidateQueries({
+          predicate: (query) => query.queryKey[0] === 'tasks'
+            && query.queryKey[2] === 'files',
+        }),
+      ])
+    },
   })
 }
 

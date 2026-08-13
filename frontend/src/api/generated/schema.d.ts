@@ -832,6 +832,7 @@ export interface components {
              * Format: date-time
              */
             updated_at: string;
+            permissions: components["schemas"]["FilePermissionsResponse"];
             /**
              * Uploaded At
              * Format: date-time
@@ -884,10 +885,50 @@ export interface components {
             /** Nickname */
             nickname: string | null;
         };
+        /** FileListItemResponse */
+        FileListItemResponse: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Project Id */
+            project_id: string | null;
+            /** Task Id */
+            task_id: string | null;
+            /** Uploaded By Id */
+            uploaded_by_id: string | null;
+            /** Original Name */
+            original_name: string;
+            /** Content Type */
+            content_type: string;
+            /** Size Bytes */
+            size_bytes: number;
+            /** Checksum Sha256 */
+            checksum_sha256: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            permissions: components["schemas"]["FilePermissionsResponse"];
+        };
         /** FileMetadataUpdate */
         FileMetadataUpdate: {
             /** Original Name */
             original_name: string;
+        };
+        /** FilePermissionsResponse */
+        FilePermissionsResponse: {
+            /** Can Modify */
+            can_modify: boolean;
+            /** Can Delete */
+            can_delete: boolean;
         };
         /** FileResponse */
         FileResponse: {
@@ -3262,7 +3303,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["FileResponse"][];
+                    "application/json": components["schemas"]["FileListItemResponse"][];
                 };
             };
             /** @description Task not found or not accessible */

@@ -9,6 +9,7 @@ from fastapi.responses import FileResponse as DownloadResponse
 from silly_teamwork.api.dependencies import CurrentUser, DbSession, FileServiceDep
 from silly_teamwork.schemas.file import (
     FileIndexItemResponse,
+    FileListItemResponse,
     FileMetadataUpdate,
     FileResponse,
     ProjectFileIndexResponse,
@@ -161,7 +162,7 @@ async def list_project_files(
 
 @task_router.get(
     "/{task_id}/files",
-    response_model=list[FileResponse],
+    response_model=list[FileListItemResponse],
     summary="List task files",
     responses={404: {"description": "Task not found or not accessible"}},
 )
@@ -170,12 +171,12 @@ async def list_task_files(
     session: DbSession,
     current_user: CurrentUser,
     file_service: FileServiceDep,
-) -> list[FileResponse]:
+) -> list[FileListItemResponse]:
     try:
-        files = await file_service.list_task_files(session, current_user, task_id)
+        task_files = await file_service.list_task_files(session, current_user, task_id)
     except Exception as error:
         _raise_file_http_error(error)
-    return [FileResponse.model_validate(file) for file in files]
+    return task_files
 
 
 @router.get(

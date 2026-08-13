@@ -72,7 +72,7 @@ function fileIcon(file: CollaborationFile): ReactNode {
 }
 
 interface FilePanelProps {
-  scope: FileScope
+  scope: Extract<FileScope, 'task'>
   ownerId: string
   title?: string
 }
@@ -212,20 +212,43 @@ export function FilePanel({ scope, ownerId, title = '文件' }: FilePanelProps) 
                 >
                   下载
                 </Button>,
-                <Button key="rename" type="link" icon={<EditOutlined />} onClick={() => openRename(file)}>
-                  重命名
-                </Button>,
-                <Popconfirm
-                  key="delete"
-                  title="删除文件"
-                  description={`确定删除“${file.original_name}”吗？`}
-                  okText="删除"
-                  cancelText="取消"
-                  okButtonProps={{ danger: true }}
-                  onConfirm={() => runAction(() => deleteMutation.mutateAsync(file.id), '文件已删除')}
-                >
-                  <Button danger type="link" icon={<DeleteOutlined />}>删除</Button>
-                </Popconfirm>,
+                ...(file.permissions.can_modify
+                  ? [
+                      <Button
+                        key="rename"
+                        type="link"
+                        icon={<EditOutlined />}
+                        onClick={() => openRename(file)}
+                      >
+                        重命名
+                      </Button>,
+                    ]
+                  : []),
+                ...(file.permissions.can_delete
+                  ? [
+                      <Popconfirm
+                        key="delete"
+                        title="确认删除该文件？"
+                        description="删除后无法恢复。"
+                        okText="删除"
+                        cancelText="取消"
+                        okButtonProps={{ danger: true }}
+                        onConfirm={() => runAction(
+                          () => deleteMutation.mutateAsync(file.id),
+                          '文件已删除',
+                        )}
+                      >
+                        <Button
+                          danger
+                          type="link"
+                          icon={<DeleteOutlined />}
+                          loading={deleteMutation.isPending && deleteMutation.variables === file.id}
+                        >
+                          删除
+                        </Button>
+                      </Popconfirm>,
+                    ]
+                  : []),
               ]}
             >
               <List.Item.Meta

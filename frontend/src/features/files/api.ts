@@ -4,6 +4,7 @@ import type {
   CollaborationFile,
   FileIndexItem,
   FileMetadataUpdate,
+  FileRecord,
   ProjectFileIndex,
 } from './types'
 
@@ -13,7 +14,7 @@ const multipartSerializer = (body: { file: File }) => {
   return formData
 }
 
-export async function listProjectFiles(projectId: string): Promise<CollaborationFile[]> {
+export async function listProjectFiles(projectId: string): Promise<FileRecord[]> {
   const { data, error, response } = await apiClient.GET(
     '/api/v1/projects/{project_id}/files',
     { params: { path: { project_id: projectId } } },
@@ -22,7 +23,7 @@ export async function listProjectFiles(projectId: string): Promise<Collaboration
   return data
 }
 
-export async function uploadProjectFile(projectId: string, file: File): Promise<CollaborationFile> {
+export async function uploadProjectFile(projectId: string, file: File): Promise<FileRecord> {
   const { data, error, response } = await apiClient.POST(
     '/api/v1/projects/{project_id}/files',
     {
@@ -68,7 +69,7 @@ export async function getProjectFileIndex(
   return data
 }
 
-export async function uploadTaskFile(taskId: string, file: File): Promise<CollaborationFile> {
+export async function uploadTaskFile(taskId: string, file: File): Promise<FileRecord> {
   const { data, error, response } = await apiClient.POST('/api/v1/tasks/{task_id}/files', {
     params: { path: { task_id: taskId } },
     body: { file: file as unknown as string },
@@ -81,7 +82,7 @@ export async function uploadTaskFile(taskId: string, file: File): Promise<Collab
 export async function updateFileMetadata(
   fileId: string,
   payload: FileMetadataUpdate,
-): Promise<CollaborationFile> {
+): Promise<FileRecord> {
   const { data, error, response } = await apiClient.PATCH('/api/v1/files/{file_id}', {
     params: { path: { file_id: fileId } },
     body: payload,

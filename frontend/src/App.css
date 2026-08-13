@@ -345,7 +345,8 @@
   background: #eaf3ff;
 }
 
-.file-pool-download {
+.file-pool-download,
+.file-pool-delete {
   min-height: 40px;
 }
 
@@ -630,14 +631,16 @@
     margin-inline-start: 6px;
   }
 
-  .file-pool-download {
+  .file-pool-download,
+  .file-pool-delete {
     width: 44px;
     height: 44px;
     padding: 0;
     font-size: 0;
   }
 
-  .file-pool-download .anticon {
+  .file-pool-download .anticon,
+  .file-pool-delete .anticon {
     font-size: 18px;
   }
 
