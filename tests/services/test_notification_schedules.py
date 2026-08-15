@@ -15,6 +15,7 @@ from silly_teamwork.models import (
     Notification,
     NotificationSchedule,
     NotificationScheduleStatus,
+    NotificationType,
     Project,
     ProjectMember,
     ProjectRole,
@@ -335,7 +336,7 @@ async def test_personal_due_date_rebuild_preserves_history_for_all_assignments(
 
 
 @pytest.mark.asyncio
-async def test_schedule_creation_is_idempotent_and_does_not_create_notifications(
+async def test_schedule_creation_is_idempotent_and_does_not_add_notifications(
     scheduling_context: SchedulingContext,
 ) -> None:
     due_at = FIXED_NOW + timedelta(days=7)
@@ -355,7 +356,10 @@ async def test_schedule_creation_is_idempotent_and_does_not_create_notifications
             select(func.count()).select_from(Notification)
         )
         assert schedule_count == 5
-        assert notification_count == 0
+        assert notification_count == 1
+        event = await session.scalar(select(Notification))
+        assert event is not None
+        assert event.type is NotificationType.TASK_CREATED
 
 
 @pytest.mark.asyncio

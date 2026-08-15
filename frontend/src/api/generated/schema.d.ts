@@ -1178,6 +1178,8 @@ export interface components {
             related_task_id: string | null;
             /** Related Project Id */
             related_project_id: string | null;
+            /** Related File Id */
+            related_file_id: string | null;
             /** Is Read */
             is_read: boolean;
             /**
@@ -1192,7 +1194,7 @@ export interface components {
          * NotificationType
          * @enum {string}
          */
-        NotificationType: "task_due_soon" | "task_overdue" | "project_due_soon" | "system";
+        NotificationType: "task_due_soon" | "task_overdue" | "project_due_soon" | "system" | "project_created" | "task_created" | "file_uploaded";
         /** PasswordChangeRequest */
         PasswordChangeRequest: {
             /**

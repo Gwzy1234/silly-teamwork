@@ -26,6 +26,7 @@ from silly_teamwork.schemas.file import (
     ProjectFileTaskGroupResponse,
 )
 from silly_teamwork.services.collaboration_access import CollaborationAccessService
+from silly_teamwork.services.event_notifications import EventNotificationService
 from silly_teamwork.services.exceptions import (
     FileAccessDeniedError,
     FileNotFoundError,
@@ -58,12 +59,14 @@ class FileService:
         access_service: CollaborationAccessService | None = None,
         storage: LocalFileStorage | None = None,
         cleanup_service: FileCleanupService | None = None,
+        event_notification_service: EventNotificationService | None = None,
         max_file_size: int | None = None,
     ) -> None:
         settings = get_settings()
         self.access = access_service or CollaborationAccessService()
         self.storage = storage or LocalFileStorage(settings.upload_dir)
         self.cleanup = cleanup_service or FileCleanupService(self.storage)
+        self.events = event_notification_service or EventNotificationService(self.access)
         self.max_file_size = max_file_size or settings.max_file_size
 
     async def upload_project_file(
@@ -270,6 +273,7 @@ class FileService:
         try:
             files.create_file(session, file)
             await session.flush()
+            await self.events.notify_file_uploaded(session, current_user, file)
             await session.commit()
             await session.refresh(file)
         except Exception:

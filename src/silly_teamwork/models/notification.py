@@ -21,6 +21,7 @@ from silly_teamwork.db.base import Base, UUIDPrimaryKeyMixin
 from silly_teamwork.models.enums import NotificationType
 
 if TYPE_CHECKING:
+    from silly_teamwork.models.file import File
     from silly_teamwork.models.project import Project
     from silly_teamwork.models.task import Task
     from silly_teamwork.models.user import User
@@ -30,7 +31,9 @@ class Notification(UUIDPrimaryKeyMixin, Base):
     __tablename__ = "notifications"
     __table_args__ = (
         CheckConstraint(
-            "related_task_id IS NULL OR related_project_id IS NULL",
+            "(CASE WHEN related_task_id IS NOT NULL THEN 1 ELSE 0 END + "
+            "CASE WHEN related_project_id IS NOT NULL THEN 1 ELSE 0 END + "
+            "CASE WHEN related_file_id IS NOT NULL THEN 1 ELSE 0 END) <= 1",
             name="has_at_most_one_related_resource",
         ),
     )
@@ -54,6 +57,9 @@ class Notification(UUIDPrimaryKeyMixin, Base):
     related_project_id: Mapped[UUID | None] = mapped_column(
         ForeignKey("projects.id", ondelete="SET NULL")
     )
+    related_file_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("files.id", ondelete="SET NULL"), index=True
+    )
     is_read: Mapped[bool] = mapped_column(
         Boolean, default=False, server_default=text("false"), index=True, nullable=False
     )
@@ -65,3 +71,4 @@ class Notification(UUIDPrimaryKeyMixin, Base):
     user: Mapped[User] = relationship(back_populates="notifications")
     related_task: Mapped[Task | None] = relationship(back_populates="notifications")
     related_project: Mapped[Project | None] = relationship(back_populates="notifications")
+    related_file: Mapped[File | None] = relationship(back_populates="notifications")

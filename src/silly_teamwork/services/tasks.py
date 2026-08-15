@@ -25,6 +25,7 @@ from silly_teamwork.repositories import (
 )
 from silly_teamwork.schemas.task import TaskCreate, TaskMemberAdd, TaskUpdate
 from silly_teamwork.services.collaboration_access import CollaborationAccessService
+from silly_teamwork.services.event_notifications import EventNotificationService
 from silly_teamwork.services.exceptions import (
     InvalidStatusTransitionError,
     ProjectAccessDeniedError,
@@ -57,10 +58,12 @@ class TaskService:
         access_service: CollaborationAccessService | None = None,
         cleanup_service: FileCleanupService | None = None,
         schedule_service: NotificationScheduleService | None = None,
+        event_notification_service: EventNotificationService | None = None,
     ) -> None:
         self.access = access_service or CollaborationAccessService()
         self.deletion = TaskDeletionService(cleanup_service)
         self.schedules = schedule_service or NotificationScheduleService()
+        self.events = event_notification_service or EventNotificationService(self.access)
 
     async def create_task(
         self,
@@ -97,6 +100,7 @@ class TaskService:
             )
             await session.flush()
             await self.schedules.create_task_deadline_schedules(session, task)
+            await self.events.notify_task_created(session, current_user, task)
             await session.commit()
         except Exception:
             await session.rollback()

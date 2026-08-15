@@ -12,6 +12,7 @@ from silly_teamwork.repositories import projects, task_assignments, tasks, team_
 from silly_teamwork.repositories.task_assignments import PersonalTaskAggregate
 from silly_teamwork.schemas.personal_task import PersonalTaskCreate
 from silly_teamwork.services.collaboration_access import CollaborationAccessService
+from silly_teamwork.services.event_notifications import EventNotificationService
 from silly_teamwork.services.exceptions import (
     PersonalTaskValidationError,
     ProjectAccessDeniedError,
@@ -31,10 +32,12 @@ class PersonalTaskService:
         access_service: CollaborationAccessService | None = None,
         cleanup_service: FileCleanupService | None = None,
         schedule_service: NotificationScheduleService | None = None,
+        event_notification_service: EventNotificationService | None = None,
     ) -> None:
         self.access = access_service or CollaborationAccessService()
         self.deletion = TaskDeletionService(cleanup_service)
         self.schedules = schedule_service or NotificationScheduleService()
+        self.events = event_notification_service or EventNotificationService(self.access)
 
     async def create_personal_task(
         self,
@@ -82,6 +85,7 @@ class PersonalTaskService:
                 await self.schedules.create_assignment_deadline_schedules(
                     session, assignment
                 )
+            await self.events.notify_task_created(session, current_user, task)
             await session.commit()
         except Exception:
             await session.rollback()

@@ -4,6 +4,7 @@ from silly_teamwork.services.admin import AdminService
 from silly_teamwork.services.auth import AuthService
 from silly_teamwork.services.collaboration_access import CollaborationAccessService
 from silly_teamwork.services.deadlines import DeadlineService
+from silly_teamwork.services.event_notifications import EventNotificationService
 from silly_teamwork.services.files import FileService
 from silly_teamwork.services.notification_schedules import NotificationScheduleService
 from silly_teamwork.services.notifications import NotificationService
@@ -21,6 +22,7 @@ __all__ = [
     "CollaborationAccessService",
     "DeadlineService",
     "DevelopmentSeedService",
+    "EventNotificationService",
     "FileService",
     "NotificationService",
     "NotificationScheduleService",

@@ -70,6 +70,7 @@ def test_notification_indexes_and_history_preserving_foreign_keys() -> None:
     }
     assert ondelete_by_column["related_task_id"] == "SET NULL"
     assert ondelete_by_column["related_project_id"] == "SET NULL"
+    assert ondelete_by_column["related_file_id"] == "SET NULL"
 
 
 def test_notification_schedule_constraints_indexes_and_foreign_keys() -> None:

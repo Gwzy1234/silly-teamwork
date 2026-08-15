@@ -4,6 +4,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from silly_teamwork.models.system_admin import SystemAdmin
+from silly_teamwork.models.user import User
 
 
 async def get_by_user_id(session: AsyncSession, user_id: UUID) -> SystemAdmin | None:
@@ -13,3 +14,12 @@ async def get_by_user_id(session: AsyncSession, user_id: UUID) -> SystemAdmin | 
 
 def add(session: AsyncSession, system_admin: SystemAdmin) -> None:
     session.add(system_admin)
+
+
+async def list_with_users(session: AsyncSession) -> list[tuple[SystemAdmin, User]]:
+    result = await session.execute(
+        select(SystemAdmin, User)
+        .join(User, User.id == SystemAdmin.user_id)
+        .order_by(SystemAdmin.created_at, User.username)
+    )
+    return list(result.tuples().all())

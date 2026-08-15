@@ -16,6 +16,7 @@ class NotificationResponse(BaseModel):
     content: str
     related_task_id: UUID | None
     related_project_id: UUID | None
+    related_file_id: UUID | None
     is_read: bool
     created_at: datetime
     read_at: datetime | None

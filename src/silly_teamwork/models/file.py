@@ -9,6 +9,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from silly_teamwork.db.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
 
 if TYPE_CHECKING:
+    from silly_teamwork.models.notification import Notification
     from silly_teamwork.models.project import Project
     from silly_teamwork.models.task import Task
     from silly_teamwork.models.user import User
@@ -47,3 +48,6 @@ class File(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     project: Mapped[Project | None] = relationship(back_populates="files")
     task: Mapped[Task | None] = relationship(back_populates="files")
     uploaded_by: Mapped[User | None] = relationship(back_populates="uploaded_files")
+    notifications: Mapped[list[Notification]] = relationship(
+        back_populates="related_file", passive_deletes=True
+    )

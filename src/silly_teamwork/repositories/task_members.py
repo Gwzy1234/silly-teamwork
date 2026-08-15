@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from silly_teamwork.models.enums import TaskRole
 from silly_teamwork.models.task import Task
 from silly_teamwork.models.task_member import TaskMember
+from silly_teamwork.models.user import User
 
 
 def add(session: AsyncSession, membership: TaskMember) -> None:
@@ -45,6 +46,18 @@ async def list_for_task(session: AsyncSession, task_id: UUID) -> list[TaskMember
         .order_by(TaskMember.assigned_at, TaskMember.id)
     )
     return list(result.scalars().all())
+
+
+async def list_with_users_for_task(
+    session: AsyncSession, task_id: UUID
+) -> list[tuple[TaskMember, User]]:
+    result = await session.execute(
+        select(TaskMember, User)
+        .join(User, User.id == TaskMember.user_id)
+        .where(TaskMember.task_id == task_id)
+        .order_by(TaskMember.assigned_at, User.username)
+    )
+    return list(result.tuples().all())
 
 
 async def delete(session: AsyncSession, membership: TaskMember) -> None:

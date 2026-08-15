@@ -13,6 +13,7 @@ from silly_teamwork.db.base import Base
 from silly_teamwork.models import (
     File,
     Notification,
+    NotificationType,
     Project,
     ProjectMember,
     ProjectRole,
@@ -533,7 +534,7 @@ async def test_task_service_lifecycle_status_and_permissions(
 
 
 @pytest.mark.asyncio
-async def test_task_creation_does_not_generate_assignment_notification(
+async def test_task_creation_notifies_assigned_owner(
     collaboration_context: CollaborationContext,
 ) -> None:
     ctx = collaboration_context
@@ -549,7 +550,10 @@ async def test_task_creation_does_not_generate_assignment_notification(
         task_id = task.id
 
     async with ctx.session_factory() as session:
-        assert await _notifications_for_task(session, task_id) == []
+        task_notifications = await _notifications_for_task(session, task_id)
+        assert len(task_notifications) == 1
+        assert task_notifications[0].user_id == ctx.member_id
+        assert task_notifications[0].type is NotificationType.TASK_CREATED
 
 
 @pytest.mark.asyncio

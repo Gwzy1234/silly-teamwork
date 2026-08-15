@@ -20,6 +20,7 @@ from silly_teamwork.repositories import (
 )
 from silly_teamwork.schemas.project import ProjectCreate, ProjectMemberAdd, ProjectUpdate
 from silly_teamwork.services.collaboration_access import CollaborationAccessService
+from silly_teamwork.services.event_notifications import EventNotificationService
 from silly_teamwork.services.exceptions import (
     InvalidDeadlineError,
     InvalidStatusTransitionError,
@@ -44,9 +45,11 @@ class ProjectService:
         self,
         access_service: CollaborationAccessService | None = None,
         cleanup_service: FileCleanupService | None = None,
+        event_notification_service: EventNotificationService | None = None,
     ) -> None:
         self.access = access_service or CollaborationAccessService()
         self.cleanup = cleanup_service or FileCleanupService()
+        self.events = event_notification_service or EventNotificationService(self.access)
 
     async def create_project(
         self,
@@ -84,6 +87,7 @@ class ProjectService:
                 ),
             )
             await session.flush()
+            await self.events.notify_project_created(session, current_user, project)
             await session.commit()
         except Exception:
             await session.rollback()

@@ -66,6 +66,9 @@ class NotificationType(StrEnum):
     TASK_OVERDUE = "task_overdue"
     PROJECT_DUE_SOON = "project_due_soon"
     SYSTEM = "system"
+    PROJECT_CREATED = "project_created"
+    TASK_CREATED = "task_created"
+    FILE_UPLOADED = "file_uploaded"
 
 
 class NotificationScheduleStatus(StrEnum):

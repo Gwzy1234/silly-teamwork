@@ -90,6 +90,19 @@ class CollaborationAccessService:
             return False
         return await self._can_access_project_record(session, current_user.id, project)
 
+    async def can_receive_project_created_notification(
+        self, session: AsyncSession, current_user: User, project_id: UUID
+    ) -> bool:
+        project = await projects.get_by_id(session, project_id)
+        if project is None:
+            return False
+        return (
+            await team_members.get_by_team_and_user(
+                session, project.team_id, current_user.id
+            )
+            is not None
+        )
+
     async def require_project_access(
         self, session: AsyncSession, current_user: User, project_id: UUID
     ) -> Project:

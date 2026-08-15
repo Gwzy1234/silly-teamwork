@@ -23,16 +23,20 @@ async def find_matching_unread(
     notification_type: NotificationType,
     related_task_id: UUID | None,
     related_project_id: UUID | None,
+    related_file_id: UUID | None,
     title: str | None = None,
     content: str | None = None,
+    unread_only: bool = True,
 ) -> Notification | None:
     statement = select(Notification).where(
         Notification.user_id == user_id,
         Notification.type == notification_type,
         Notification.related_task_id == related_task_id,
         Notification.related_project_id == related_project_id,
-        Notification.is_read.is_(False),
+        Notification.related_file_id == related_file_id,
     )
+    if unread_only:
+        statement = statement.where(Notification.is_read.is_(False))
     if title is not None:
         statement = statement.where(Notification.title == title)
     if content is not None:
