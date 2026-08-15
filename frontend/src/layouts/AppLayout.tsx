@@ -1,5 +1,6 @@
 import {
   BellOutlined,
+  CheckSquareOutlined,
   DashboardOutlined,
   FolderOpenOutlined,
   LogoutOutlined,
@@ -50,6 +51,7 @@ export function AppLayout() {
 
   const navigationItems: MenuProps['items'] = [
     { key: '/dashboard', icon: <DashboardOutlined />, label: '概览' },
+    { key: '/my-tasks', icon: <CheckSquareOutlined />, label: '我的任务' },
     { key: '/files', icon: <FolderOpenOutlined />, label: '文件池' },
     {
       type: 'group',

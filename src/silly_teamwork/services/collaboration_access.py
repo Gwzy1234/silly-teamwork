@@ -3,7 +3,7 @@ from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from silly_teamwork.models.enums import ProjectRole, TaskRole, TeamRole
+from silly_teamwork.models.enums import ProjectRole, TaskRole, TaskType, TeamRole
 from silly_teamwork.models.file import File
 from silly_teamwork.models.project import Project
 from silly_teamwork.models.task import Task
@@ -13,6 +13,7 @@ from silly_teamwork.repositories import (
     project_members,
     projects,
     system_admins,
+    task_assignments,
     task_members,
     tasks,
     team_members,
@@ -77,6 +78,7 @@ class CollaborationAccessService:
         if not await self._can_access_task_record(session, current_user.id, task):
             raise TaskNotFoundError("Task not found")
         return task
+
     async def can_access_project(
         self, session: AsyncSession, current_user: User, project_id: UUID
     ) -> bool:
@@ -102,6 +104,71 @@ class CollaborationAccessService:
         if task is None:
             return False
         return await self._can_access_task_record(session, current_user.id, task)
+
+    async def can_create_personal_task(
+        self, session: AsyncSession, current_user: User, project_id: UUID
+    ) -> bool:
+        project = await projects.get_by_id(session, project_id)
+        if project is None:
+            return False
+        if await system_admins.get_by_user_id(session, current_user.id) is not None:
+            return True
+        return await self._is_team_leader(session, project.team_id, current_user.id)
+
+    async def can_view_project_personal_tasks(
+        self, session: AsyncSession, current_user: User, project_id: UUID
+    ) -> bool:
+        return await self.can_create_personal_task(session, current_user, project_id)
+
+    async def can_view_personal_task(
+        self, session: AsyncSession, current_user: User, task_id: UUID
+    ) -> bool:
+        task = await tasks.get_by_id(session, task_id)
+        if task is None or task.task_type is not TaskType.PERSONAL:
+            return False
+        return await self._can_access_task_record(session, current_user.id, task)
+
+    async def can_view_personal_task_progress(
+        self, session: AsyncSession, current_user: User, task_id: UUID
+    ) -> bool:
+        task = await tasks.get_by_id(session, task_id)
+        if task is None or task.task_type is not TaskType.PERSONAL:
+            return False
+        if await system_admins.get_by_user_id(session, current_user.id) is not None:
+            return True
+        project = await projects.get_by_id(session, task.project_id)
+        return project is not None and await self._is_team_leader(
+            session, project.team_id, current_user.id
+        )
+
+    async def can_access_task_assignment(
+        self, session: AsyncSession, current_user: User, assignment_id: UUID
+    ) -> bool:
+        assignment = await task_assignments.get_by_id(session, assignment_id)
+        if assignment is None:
+            return False
+        if assignment.user_id == current_user.id:
+            return True
+        return await self.can_view_personal_task_progress(session, current_user, assignment.task_id)
+
+    async def can_update_task_assignment_status(
+        self, session: AsyncSession, current_user: User, assignment_id: UUID
+    ) -> bool:
+        assignment = await task_assignments.get_by_id(session, assignment_id)
+        return assignment is not None and assignment.user_id == current_user.id
+
+    async def can_delete_personal_task(
+        self, session: AsyncSession, current_user: User, task_id: UUID
+    ) -> bool:
+        task = await tasks.get_by_id(session, task_id)
+        if task is None or task.task_type is not TaskType.PERSONAL:
+            return False
+        if await system_admins.get_by_user_id(session, current_user.id) is not None:
+            return True
+        project = await projects.get_by_id(session, task.project_id)
+        return project is not None and await self._is_team_leader(
+            session, project.team_id, current_user.id
+        )
 
     async def require_task_access(
         self, session: AsyncSession, current_user: User, task_id: UUID
@@ -140,6 +207,8 @@ class CollaborationAccessService:
         task = await tasks.get_by_id(session, task_id)
         if task is None:
             return False
+        if task.task_type is TaskType.PERSONAL:
+            return False
         project = await projects.get_by_id(session, task.project_id)
         if project is None:
             return False
@@ -150,9 +219,7 @@ class CollaborationAccessService:
         )
         if project_membership is not None and project_membership.role is ProjectRole.OWNER:
             return True
-        task_membership = await task_members.get_by_task_and_user(
-            session, task.id, current_user.id
-        )
+        task_membership = await task_members.get_by_task_and_user(session, task.id, current_user.id)
         return task_membership is not None and task_membership.role is TaskRole.OWNER
 
     async def can_delete_task(
@@ -160,6 +227,8 @@ class CollaborationAccessService:
     ) -> bool:
         task = await tasks.get_by_id(session, task_id)
         if task is None:
+            return False
+        if task.task_type is TaskType.PERSONAL:
             return False
         if await system_admins.get_by_user_id(session, current_user.id) is not None:
             return True
@@ -171,10 +240,7 @@ class CollaborationAccessService:
         project_membership = await project_members.get_by_project_and_user(
             session, project.id, current_user.id
         )
-        return (
-            project_membership is not None
-            and project_membership.role is ProjectRole.OWNER
-        )
+        return project_membership is not None and project_membership.role is ProjectRole.OWNER
 
     async def can_upload_project_file(
         self, session: AsyncSession, current_user: User, project_id: UUID
@@ -219,8 +285,7 @@ class CollaborationAccessService:
         if await self._is_team_leader(session, project.team_id, user_id):
             return True
         return (
-            await project_members.get_by_project_and_user(session, project.id, user_id)
-            is not None
+            await project_members.get_by_project_and_user(session, project.id, user_id) is not None
         )
 
     async def _can_access_task_record(
@@ -229,6 +294,14 @@ class CollaborationAccessService:
         project = await projects.get_by_id(session, task.project_id)
         if project is None:
             return False
+        if task.task_type is TaskType.PERSONAL:
+            if await system_admins.get_by_user_id(session, user_id) is not None:
+                return True
+            if await self._is_team_leader(session, project.team_id, user_id):
+                return True
+            return (
+                await task_assignments.get_by_task_and_user(session, task.id, user_id) is not None
+            )
         if await self._can_access_project_record(session, user_id, project):
             return True
         return await task_members.get_by_task_and_user(session, task.id, user_id) is not None
@@ -272,9 +345,7 @@ class CollaborationAccessService:
         raise FileNotFoundError("File not found")
 
     @staticmethod
-    async def _is_team_leader(
-        session: AsyncSession, team_id: UUID, user_id: UUID
-    ) -> bool:
+    async def _is_team_leader(session: AsyncSession, team_id: UUID, user_id: UUID) -> bool:
         membership = await team_members.get_by_team_and_user(session, team_id, user_id)
         return membership is not None and membership.role is TeamRole.OWNER
 

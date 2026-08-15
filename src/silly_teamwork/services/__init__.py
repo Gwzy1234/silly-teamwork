@@ -6,8 +6,10 @@ from silly_teamwork.services.collaboration_access import CollaborationAccessServ
 from silly_teamwork.services.deadlines import DeadlineService
 from silly_teamwork.services.files import FileService
 from silly_teamwork.services.notifications import NotificationService
+from silly_teamwork.services.personal_tasks import PersonalTaskService
 from silly_teamwork.services.projects import ProjectService
 from silly_teamwork.services.seed import DevelopmentSeedService
+from silly_teamwork.services.task_assignments import TaskAssignmentService
 from silly_teamwork.services.tasks import TaskService
 from silly_teamwork.services.teams import TeamService
 from silly_teamwork.services.users import UserService
@@ -20,8 +22,10 @@ __all__ = [
     "DevelopmentSeedService",
     "FileService",
     "NotificationService",
+    "PersonalTaskService",
     "ProjectService",
     "TaskService",
+    "TaskAssignmentService",
     "TeamService",
     "UserService",
 ]

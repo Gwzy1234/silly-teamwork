@@ -296,6 +296,65 @@
   font-size: 12px;
 }
 
+.page-title-icon {
+  color: var(--app-color-primary);
+  font-size: 24px;
+}
+
+.personal-task-filter-card .ant-card-body {
+  padding: 14px;
+}
+
+.personal-task-list .ant-list-item {
+  padding: 0 0 16px;
+  border-block-end: 0;
+}
+
+.personal-task-card {
+  width: 100%;
+  border: 1px solid var(--app-color-border-secondary);
+  border-radius: 16px;
+  background: var(--app-color-bg-container);
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.personal-task-card-title {
+  min-width: 0;
+}
+
+.personal-task-meta {
+  color: var(--app-color-text-secondary);
+  font-size: 13px;
+}
+
+.personal-task-status-form {
+  max-width: 460px;
+}
+
+.personal-task-assignment-time {
+  font-size: 12px;
+}
+
+.project-personal-task-card {
+  height: 100%;
+  background: var(--app-color-bg-container);
+  border-color: var(--app-color-border-secondary);
+}
+
+.project-personal-task-card .ant-card-body {
+  height: 100%;
+}
+
+.project-personal-task-description {
+  min-height: 44px;
+  margin: 8px 0 0 !important;
+}
+
+.project-personal-task-pagination {
+  align-self: flex-end;
+}
+
 .file-list-icon {
   padding: 10px;
   border-radius: 10px;
@@ -567,6 +626,53 @@
   .settings-profile-layout {
     grid-template-columns: minmax(0, 1fr);
     gap: 24px;
+  }
+
+  .personal-task-filter-card .ant-card-body {
+    padding: 10px;
+  }
+
+  .personal-task-filter-card .ant-segmented-item-label {
+    padding-inline: 7px;
+    font-size: 13px;
+  }
+
+  .personal-task-card .ant-card-body {
+    padding: 16px;
+  }
+
+  .personal-task-card .ant-space {
+    row-gap: 6px;
+  }
+
+  .personal-task-status-form {
+    max-width: none;
+  }
+
+  .personal-task-status-form .ant-select-selector,
+  .personal-task-status-form .ant-btn,
+  .personal-task-list .ant-card {
+    min-height: 44px;
+  }
+
+  .personal-task-assignment-time {
+    white-space: normal;
+  }
+
+  .project-personal-task-panel > .ant-card-body {
+    padding: 14px;
+  }
+
+  .project-personal-task-card .ant-btn {
+    min-height: 44px;
+  }
+
+  .project-personal-task-description {
+    min-height: auto;
+  }
+
+  .project-personal-task-pagination {
+    align-self: center;
   }
 
   .danger-zone-card .ant-card-body > .ant-flex > .ant-btn-dangerous {

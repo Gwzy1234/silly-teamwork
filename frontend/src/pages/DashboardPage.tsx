@@ -2,6 +2,7 @@ import {
   ArrowRightOutlined,
   BellOutlined,
   CalendarOutlined,
+  CheckSquareOutlined,
   ClockCircleOutlined,
   TeamOutlined,
 } from '@ant-design/icons'
@@ -17,6 +18,7 @@ import {
   useUpcomingTasks,
 } from '../features/dashboard/hooks'
 import { useNotifications } from '../features/notifications/hooks'
+import { useMyPersonalTaskCount } from '../features/personal-tasks/hooks'
 import type { DashboardTask } from '../features/dashboard/types'
 import { TaskStatusTag } from '../features/tasks/presentation'
 import { useTeams } from '../features/teams/hooks'
@@ -105,6 +107,7 @@ export function DashboardPage() {
   const upcoming = useUpcomingTasks(deadlineHours)
   const overdue = useOverdueTasks()
   const notifications = useNotifications()
+  const personalTaskCount = useMyPersonalTaskCount()
   const unreadCount = notifications.data?.filter((item) => !item.is_read).length
 
   useEffect(() => {
@@ -124,11 +127,22 @@ export function DashboardPage() {
         </Typography.Paragraph>
       </Card>
 
-      {[teams, upcoming, overdue, notifications].some((query) => query.isError) && (
+      {[teams, upcoming, overdue, notifications, personalTaskCount].some((query) => query.isError) && (
         <Alert showIcon type="warning" message="部分数据暂时加载失败，其他模块仍可正常使用。" />
       )}
 
       <Row gutter={[16, 16]}>
+        <Col xs={24} sm={12} xl={6}>
+          <MetricCard
+            title="我的任务"
+            value={personalTaskCount.data?.unfinished}
+            loading={personalTaskCount.isPending}
+            error={personalTaskCount.isError}
+            icon={<CheckSquareOutlined />}
+            color="#2f9e44"
+            to="/my-tasks"
+          />
+        </Col>
         <Col xs={24} sm={12} xl={6}>
           <MetricCard
             title="我的团队"

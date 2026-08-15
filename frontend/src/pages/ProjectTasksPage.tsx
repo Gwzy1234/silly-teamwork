@@ -1,10 +1,12 @@
-import { ArrowLeftOutlined, PlusOutlined } from '@ant-design/icons'
+import { ArrowLeftOutlined, PlusOutlined, UserOutlined } from '@ant-design/icons'
 import { Alert, Button, Card, Empty, Flex, Result, Skeleton, Space, Table, Typography } from 'antd'
 import type { TableProps } from 'antd'
 import dayjs from 'dayjs'
 import { useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useProject } from '../features/projects/hooks'
+import { PersonalTaskCreateModal } from '../features/personal-tasks/components/PersonalTaskCreateModal'
+import { useCanPublishPersonalTask } from '../features/personal-tasks/hooks'
 import { useTeamMembers } from '../features/teams/hooks'
 import { CreateTaskModal } from '../features/tasks/components/CreateTaskModal'
 import { useTaskMemberQueries, useTasks } from '../features/tasks/hooks'
@@ -15,9 +17,11 @@ export function ProjectTasksPage() {
   const { projectId = '' } = useParams()
   const navigate = useNavigate()
   const [createOpen, setCreateOpen] = useState(false)
+  const [createPersonalOpen, setCreatePersonalOpen] = useState(false)
   const project = useProject(projectId)
   const tasks = useTasks(projectId)
   const teamMembers = useTeamMembers(project.data?.team_id || '')
+  const personalTaskPermission = useCanPublishPersonalTask(project.data?.team_id || '')
   const taskIds = (tasks.data ?? []).map((task) => task.id)
   const taskMemberQueries = useTaskMemberQueries(taskIds)
 
@@ -73,7 +77,14 @@ export function ProjectTasksPage() {
             <Typography.Text type="secondary">集中查看该科目的任务状态、优先级、截止时间和负责人</Typography.Text>
           </div>
         </Space>
-        <Button type="primary" icon={<PlusOutlined />} onClick={() => setCreateOpen(true)}>创建任务</Button>
+        <Space wrap>
+          {personalTaskPermission.canPublish && (
+            <Button icon={<UserOutlined />} onClick={() => setCreatePersonalOpen(true)}>
+              发布个人任务
+            </Button>
+          )}
+          <Button type="primary" icon={<PlusOutlined />} onClick={() => setCreateOpen(true)}>创建任务</Button>
+        </Space>
       </Flex>
 
       <Card className="content-card">
@@ -97,6 +108,13 @@ export function ProjectTasksPage() {
         teamMembers={teamMembers.data ?? []}
         open={createOpen}
         onClose={() => setCreateOpen(false)}
+      />
+      <PersonalTaskCreateModal
+        projectId={projectId}
+        teamMembers={teamMembers.data ?? []}
+        open={createPersonalOpen}
+        onClose={() => setCreatePersonalOpen(false)}
+        onCreated={(taskId) => navigate(`/personal-tasks/${taskId}`)}
       />
     </Flex>
   )

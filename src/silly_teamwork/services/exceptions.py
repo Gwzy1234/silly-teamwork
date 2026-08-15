@@ -78,6 +78,18 @@ class InvalidDeadlineError(CollaborationError):
     pass
 
 
+class PersonalTaskValidationError(CollaborationError):
+    pass
+
+
+class TaskAssignmentNotFoundError(CollaborationError):
+    pass
+
+
+class TaskAssignmentAccessDeniedError(CollaborationError):
+    pass
+
+
 class FileServiceError(Exception):
     """Base class for expected file use-case failures."""
 

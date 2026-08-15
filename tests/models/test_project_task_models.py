@@ -7,18 +7,22 @@ import pytest_asyncio
 from sqlalchemy import event, func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.orm import selectinload
 
 from silly_teamwork.db.base import Base
 from silly_teamwork.models import (
+    AttachmentMode,
     Project,
     ProjectMember,
     ProjectRole,
     ProjectStatus,
     Task,
+    TaskAssignment,
     TaskMember,
     TaskPriority,
     TaskRole,
     TaskStatus,
+    TaskType,
     Team,
     TeamMember,
     TeamRole,
@@ -125,6 +129,112 @@ async def test_project_and_task_relationships_and_cascade(
         assert await session.get(Task, task_id) is None
         assert await session.scalar(select(func.count()).select_from(ProjectMember)) == 0
         assert await session.scalar(select(func.count()).select_from(TaskMember)) == 0
+
+
+@pytest.mark.asyncio
+async def test_personal_task_assignments_keep_independent_statuses(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    async with session_factory.begin() as session:
+        creator, assignee, reviewer, team = await _create_team_context(session)
+        project = Project(
+            team_id=team.id,
+            name="Personal Assignment Project",
+            creator=creator,
+        )
+        task = Task(
+            project=project,
+            title="Complete the laboratory report",
+            task_type=TaskType.PERSONAL,
+            attachment_mode=AttachmentMode.SHARED,
+            creator=creator,
+        )
+        first_assignment = TaskAssignment(
+            task=task,
+            user=assignee,
+            status=TaskStatus.IN_PROGRESS,
+        )
+        second_assignment = TaskAssignment(
+            task=task,
+            user=reviewer,
+            status=TaskStatus.DONE,
+            started_at=datetime.now(UTC) - timedelta(hours=1),
+            completed_at=datetime.now(UTC),
+        )
+        session.add_all([task, first_assignment, second_assignment])
+        await session.flush()
+
+        task_id = task.id
+        assignee_id = assignee.id
+        assert task.assignments == [first_assignment, second_assignment]
+        assert first_assignment.task is task
+        assert first_assignment.user is assignee
+        assert first_assignment.status is TaskStatus.IN_PROGRESS
+        assert second_assignment.status is TaskStatus.DONE
+        assert task.status is TaskStatus.TODO
+
+    async with session_factory() as session:
+        loaded_assignee = await session.scalar(
+            select(User)
+            .where(User.id == assignee_id)
+            .options(selectinload(User.task_assignments))
+        )
+        assert loaded_assignee is not None
+        assert len(loaded_assignee.task_assignments) == 1
+        assert loaded_assignee.task_assignments[0].task_id == task_id
+
+    async with session_factory.begin() as session:
+        task = await session.get(Task, task_id)
+        assert task is not None
+        await session.delete(task)
+
+    async with session_factory() as session:
+        assert await session.scalar(select(func.count()).select_from(TaskAssignment)) == 0
+
+
+@pytest.mark.asyncio
+async def test_task_defaults_remain_collaborative_and_shared(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    async with session_factory.begin() as session:
+        creator, _, _, team = await _create_team_context(session)
+        project = Project(team_id=team.id, name="Existing Task Project", creator=creator)
+        task = Task(project=project, title="Existing workflow task", creator=creator)
+        session.add(task)
+        await session.flush()
+
+        assert task.task_type is TaskType.COLLABORATIVE
+        assert task.attachment_mode is AttachmentMode.SHARED
+
+
+@pytest.mark.asyncio
+async def test_task_assignment_rejects_duplicate_user(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    async with session_factory.begin() as session:
+        creator, assignee, _, team = await _create_team_context(session)
+        project = Project(team_id=team.id, name="Unique Assignment Project", creator=creator)
+        task = Task(
+            project=project,
+            title="Unique personal assignment",
+            task_type=TaskType.PERSONAL,
+            creator=creator,
+        )
+        session.add_all(
+            [
+                task,
+                TaskAssignment(task=task, user=assignee),
+            ]
+        )
+        await session.flush()
+        task_id = task.id
+        assignee_id = assignee.id
+
+    async with session_factory() as session:
+        session.add(TaskAssignment(task_id=task_id, user_id=assignee_id))
+        with pytest.raises(IntegrityError):
+            await session.commit()
+        await session.rollback()
 
 
 @pytest.mark.asyncio

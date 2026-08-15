@@ -40,6 +40,16 @@ class TaskPriority(StrEnum):
     URGENT = "urgent"
 
 
+class TaskType(StrEnum):
+    COLLABORATIVE = "collaborative"
+    PERSONAL = "personal"
+
+
+class AttachmentMode(StrEnum):
+    SHARED = "shared"
+    INDIVIDUAL = "individual"
+
+
 class InvitationStatus(StrEnum):
     ACTIVE = "active"
     USED = "used"

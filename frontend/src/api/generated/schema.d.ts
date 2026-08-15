@@ -473,6 +473,58 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/projects/{project_id}/personal-tasks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List project personal tasks */
+        get: operations["list_project_personal_tasks_api_v1_projects__project_id__personal_tasks_get"];
+        put?: never;
+        /** Create a personal task */
+        post: operations["create_personal_task_api_v1_projects__project_id__personal_tasks_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tasks/my": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List my personal-task assignments */
+        get: operations["list_my_personal_tasks_api_v1_tasks_my_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tasks/my/count": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Count my personal-task assignments */
+        get: operations["count_my_personal_tasks_api_v1_tasks_my_count_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/tasks/upcoming": {
         parameters: {
             query?: never;
@@ -665,6 +717,75 @@ export interface paths {
         patch: operations["update_file_metadata_api_v1_files__file_id__patch"];
         trace?: never;
     };
+    "/api/v1/personal-tasks/{task_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get personal-task details */
+        get: operations["get_personal_task_api_v1_personal_tasks__task_id__get"];
+        put?: never;
+        post?: never;
+        /** Delete a personal task */
+        delete: operations["delete_personal_task_api_v1_personal_tasks__task_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/personal-tasks/{task_id}/assignments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List personal-task progress */
+        get: operations["list_personal_task_assignments_api_v1_personal_tasks__task_id__assignments_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/task-assignments/{assignment_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get a task assignment */
+        get: operations["get_task_assignment_api_v1_task_assignments__assignment_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/task-assignments/{assignment_id}/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Change my task-assignment status */
+        patch: operations["change_task_assignment_status_api_v1_task_assignments__assignment_id__status_patch"];
+        trace?: never;
+    };
     "/api/v1/notifications": {
         parameters: {
             query?: never;
@@ -780,6 +901,11 @@ export interface components {
              */
             created_at: string;
         };
+        /**
+         * AttachmentMode
+         * @enum {string}
+         */
+        AttachmentMode: "shared" | "individual";
         /** Body_upload_avatar_api_v1_users_me_avatar_post */
         Body_upload_avatar_api_v1_users_me_avatar_post: {
             /**
@@ -1009,6 +1135,28 @@ export interface components {
             /** Updated Count */
             updated_count: number;
         };
+        /** MyPersonalTaskCountResponse */
+        MyPersonalTaskCountResponse: {
+            /** Total */
+            total: number;
+            /** Unfinished */
+            unfinished: number;
+            /** Todo */
+            todo: number;
+            /** In Progress */
+            in_progress: number;
+            /** In Review */
+            in_review: number;
+            /** Done */
+            done: number;
+            /** Cancelled */
+            cancelled: number;
+        };
+        /** MyPersonalTaskResponse */
+        MyPersonalTaskResponse: {
+            assignment: components["schemas"]["TaskAssignmentResponse"];
+            task: components["schemas"]["PersonalTaskSummaryResponse"];
+        };
         /** NotificationResponse */
         NotificationResponse: {
             /**
@@ -1057,6 +1205,95 @@ export interface components {
              * Format: password
              */
             new_password: string;
+        };
+        /** PersonalTaskCreate */
+        PersonalTaskCreate: {
+            /** Title */
+            title: string;
+            /** Description */
+            description?: string | null;
+            /** @default medium */
+            priority: components["schemas"]["TaskPriority"];
+            /** Starts At */
+            starts_at?: string | null;
+            /** Due At */
+            due_at?: string | null;
+            /** Assignee User Ids */
+            assignee_user_ids: string[];
+            /** @default shared */
+            attachment_mode: components["schemas"]["AttachmentMode"];
+        };
+        /** PersonalTaskCreateResponse */
+        PersonalTaskCreateResponse: {
+            task: components["schemas"]["PersonalTaskSummaryResponse"];
+            /** Assignments */
+            assignments: components["schemas"]["TaskAssignmentResponse"][];
+        };
+        /** PersonalTaskDetailResponse */
+        PersonalTaskDetailResponse: {
+            task: components["schemas"]["PersonalTaskSummaryResponse"];
+            my_assignment: components["schemas"]["TaskAssignmentResponse"] | null;
+        };
+        /** PersonalTaskProjectSummary */
+        PersonalTaskProjectSummary: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+            team: components["schemas"]["PersonalTaskTeamSummary"];
+        };
+        /** PersonalTaskSummaryResponse */
+        PersonalTaskSummaryResponse: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Project Id
+             * Format: uuid
+             */
+            project_id: string;
+            project: components["schemas"]["PersonalTaskProjectSummary"];
+            /** Title */
+            title: string;
+            /** Description */
+            description: string | null;
+            priority: components["schemas"]["TaskPriority"];
+            task_type: components["schemas"]["TaskType"];
+            attachment_mode: components["schemas"]["AttachmentMode"];
+            /** Starts At */
+            starts_at: string | null;
+            /** Due At */
+            due_at: string | null;
+            /**
+             * Created By Id
+             * Format: uuid
+             */
+            created_by_id: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /** PersonalTaskTeamSummary */
+        PersonalTaskTeamSummary: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
         };
         /** ProjectCreate */
         ProjectCreate: {
@@ -1134,6 +1371,52 @@ export interface components {
              * Format: uuid
              */
             user_id: string;
+        };
+        /** ProjectPersonalTaskListItemResponse */
+        ProjectPersonalTaskListItemResponse: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Title */
+            title: string;
+            /** Description */
+            description: string | null;
+            priority: components["schemas"]["TaskPriority"];
+            attachment_mode: components["schemas"]["AttachmentMode"];
+            /** Starts At */
+            starts_at: string | null;
+            /** Due At */
+            due_at: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Assignment Total */
+            assignment_total: number;
+            /** Todo Count */
+            todo_count: number;
+            /** In Progress Count */
+            in_progress_count: number;
+            /** In Review Count */
+            in_review_count: number;
+            /** Done Count */
+            done_count: number;
+            /** Cancelled Count */
+            cancelled_count: number;
+        };
+        /** ProjectPersonalTaskPageResponse */
+        ProjectPersonalTaskPageResponse: {
+            /** Items */
+            items: components["schemas"]["ProjectPersonalTaskListItemResponse"][];
+            /** Total */
+            total: number;
+            /** Limit */
+            limit: number;
+            /** Offset */
+            offset: number;
         };
         /** ProjectResponse */
         ProjectResponse: {
@@ -1227,6 +1510,57 @@ export interface components {
              * Format: password
              */
             invite_code: string;
+        };
+        /** TaskAssignmentResponse */
+        TaskAssignmentResponse: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Task Id
+             * Format: uuid
+             */
+            task_id: string;
+            /**
+             * User Id
+             * Format: uuid
+             */
+            user_id: string;
+            user: components["schemas"]["TaskAssignmentUserResponse"];
+            status: components["schemas"]["TaskStatus"];
+            /**
+             * Assigned At
+             * Format: date-time
+             */
+            assigned_at: string;
+            /** Started At */
+            started_at: string | null;
+            /** Completed At */
+            completed_at: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /** TaskAssignmentUserResponse */
+        TaskAssignmentUserResponse: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Username */
+            username: string;
+            /** Nickname */
+            nickname: string | null;
         };
         /** TaskCreate */
         TaskCreate: {
@@ -1353,6 +1687,11 @@ export interface components {
         TaskStatusUpdate: {
             status: components["schemas"]["TaskStatus"];
         };
+        /**
+         * TaskType
+         * @enum {string}
+         */
+        TaskType: "collaborative" | "personal";
         /** TaskUpdate */
         TaskUpdate: {
             /** Title */
@@ -2987,6 +3326,167 @@ export interface operations {
             };
         };
     };
+    list_project_personal_tasks_api_v1_projects__project_id__personal_tasks_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectPersonalTaskPageResponse"];
+                };
+            };
+            /** @description Team leader or system administrator required */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Project not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_personal_task_api_v1_projects__project_id__personal_tasks_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PersonalTaskCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PersonalTaskCreateResponse"];
+                };
+            };
+            /** @description Invalid personal-task input */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Team leader or system administrator required */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Project not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_my_personal_tasks_api_v1_tasks_my_get: {
+        parameters: {
+            query?: {
+                status?: components["schemas"]["TaskStatus"] | null;
+                team_id?: string | null;
+                project_id?: string | null;
+                due_before?: string | null;
+                due_after?: string | null;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MyPersonalTaskResponse"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    count_my_personal_tasks_api_v1_tasks_my_count_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MyPersonalTaskCountResponse"];
+                };
+            };
+        };
+    };
     list_upcoming_tasks_api_v1_tasks_upcoming_get: {
         parameters: {
             query?: {
@@ -3650,6 +4150,226 @@ export interface operations {
                 content?: never;
             };
             /** @description File not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_personal_task_api_v1_personal_tasks__task_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                task_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PersonalTaskDetailResponse"];
+                };
+            };
+            /** @description Personal task not found or not accessible */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_personal_task_api_v1_personal_tasks__task_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                task_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Team leader or system administrator required */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Personal task not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_personal_task_assignments_api_v1_personal_tasks__task_id__assignments_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                task_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaskAssignmentResponse"][];
+                };
+            };
+            /** @description Team leader or system administrator required */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Personal task not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_task_assignment_api_v1_task_assignments__assignment_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                assignment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaskAssignmentResponse"];
+                };
+            };
+            /** @description Task assignment not found or not accessible */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    change_task_assignment_status_api_v1_task_assignments__assignment_id__status_patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                assignment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TaskStatusUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaskAssignmentResponse"];
+                };
+            };
+            /** @description Invalid status transition */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Only the assigned user can change this status */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Task assignment not found */
             404: {
                 headers: {
                     [name: string]: unknown;

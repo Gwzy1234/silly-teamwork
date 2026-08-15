@@ -8,12 +8,13 @@ from sqlalchemy import CheckConstraint, DateTime, Enum, ForeignKey, Index, Strin
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from silly_teamwork.db.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
-from silly_teamwork.models.enums import TaskPriority, TaskStatus
+from silly_teamwork.models.enums import AttachmentMode, TaskPriority, TaskStatus, TaskType
 
 if TYPE_CHECKING:
     from silly_teamwork.models.file import File
     from silly_teamwork.models.notification import Notification
     from silly_teamwork.models.project import Project
+    from silly_teamwork.models.task_assignment import TaskAssignment
     from silly_teamwork.models.task_member import TaskMember
     from silly_teamwork.models.user import User
 
@@ -55,6 +56,26 @@ class Task(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         index=True,
         nullable=False,
     )
+    task_type: Mapped[TaskType] = mapped_column(
+        Enum(
+            TaskType,
+            name="task_type",
+            values_callable=lambda enum: [item.value for item in enum],
+        ),
+        default=TaskType.COLLABORATIVE,
+        server_default=TaskType.COLLABORATIVE.value,
+        nullable=False,
+    )
+    attachment_mode: Mapped[AttachmentMode] = mapped_column(
+        Enum(
+            AttachmentMode,
+            name="attachment_mode",
+            values_callable=lambda enum: [item.value for item in enum],
+        ),
+        default=AttachmentMode.SHARED,
+        server_default=AttachmentMode.SHARED.value,
+        nullable=False,
+    )
     starts_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     due_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
@@ -62,6 +83,9 @@ class Task(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     project: Mapped[Project] = relationship(back_populates="tasks")
     creator: Mapped[User] = relationship(back_populates="tasks_created")
     members: Mapped[list[TaskMember]] = relationship(
+        back_populates="task", cascade="all, delete-orphan", passive_deletes=True
+    )
+    assignments: Mapped[list[TaskAssignment]] = relationship(
         back_populates="task", cascade="all, delete-orphan", passive_deletes=True
     )
     files: Mapped[list[File]] = relationship(

@@ -15,6 +15,7 @@ if TYPE_CHECKING:
     from silly_teamwork.models.project_member import ProjectMember
     from silly_teamwork.models.system_admin import SystemAdmin
     from silly_teamwork.models.task import Task
+    from silly_teamwork.models.task_assignment import TaskAssignment
     from silly_teamwork.models.task_member import TaskMember
     from silly_teamwork.models.team import Team
     from silly_teamwork.models.team_member import TeamMember
@@ -53,6 +54,9 @@ class User(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         back_populates="creator", passive_deletes=True
     )
     task_members: Mapped[list[TaskMember]] = relationship(
+        back_populates="user", cascade="all, delete-orphan", passive_deletes=True
+    )
+    task_assignments: Mapped[list[TaskAssignment]] = relationship(
         back_populates="user", cascade="all, delete-orphan", passive_deletes=True
     )
     tasks_created: Mapped[list[Task]] = relationship(

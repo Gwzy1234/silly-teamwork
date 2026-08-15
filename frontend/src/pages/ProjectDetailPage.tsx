@@ -35,6 +35,9 @@ import { useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { ApiError, getApiErrorMessage } from '../api/errors'
 import { ProjectFileIndexPanel } from '../features/files/components/ProjectFileIndexPanel'
+import { PersonalTaskCreateModal } from '../features/personal-tasks/components/PersonalTaskCreateModal'
+import { ProjectPersonalTaskPanel } from '../features/personal-tasks/components/ProjectPersonalTaskPanel'
+import { useCanPublishPersonalTask } from '../features/personal-tasks/hooks'
 import { ProjectForm } from '../features/projects/components/ProjectForm'
 import { projectStatusOptions } from '../features/projects/constants'
 import {
@@ -70,6 +73,7 @@ export function ProjectDetailPage() {
   const projectMembers = useProjectMembers(projectId)
   const teamMembers = useTeamMembers(project.data?.team_id || '')
   const tasks = useTasks(projectId)
+  const personalTaskPermission = useCanPublishPersonalTask(project.data?.team_id || '')
   const updateMutation = useUpdateProject(projectId)
   const statusMutation = useUpdateProjectStatus(projectId)
   const addMutation = useAddProjectMember(projectId)
@@ -81,6 +85,7 @@ export function ProjectDetailPage() {
   const [ownerOpen, setOwnerOpen] = useState(false)
   const [statusOpen, setStatusOpen] = useState(false)
   const [createTaskOpen, setCreateTaskOpen] = useState(false)
+  const [createPersonalTaskOpen, setCreatePersonalTaskOpen] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [deleteName, setDeleteName] = useState('')
   const [editForm] = Form.useForm<ProjectFormValues>()
@@ -181,11 +186,19 @@ export function ProjectDetailPage() {
                     <Button type="primary" icon={<PlusOutlined />} onClick={() => setCreateTaskOpen(true)}>
                       创建任务
                     </Button>
+                    {personalTaskPermission.canPublish && (
+                      <Button icon={<UserOutlined />} onClick={() => setCreatePersonalTaskOpen(true)}>
+                        发布个人任务
+                      </Button>
+                    )}
                   </Flex>
                   {tasks.isError ? (
                     <Alert showIcon type="error" message="任务看板加载失败" action={<Button onClick={() => tasks.refetch()}>重试</Button>} />
                   ) : (
                     <TaskBoard projectId={projectId} tasks={tasks.data ?? []} loading={tasks.isPending} />
+                  )}
+                  {personalTaskPermission.canPublish && (
+                    <ProjectPersonalTaskPanel projectId={projectId} />
                   )}
                 </Flex>
               ),
@@ -344,6 +357,13 @@ export function ProjectDetailPage() {
         teamMembers={teamMembers.data ?? []}
         open={createTaskOpen}
         onClose={() => setCreateTaskOpen(false)}
+      />
+      <PersonalTaskCreateModal
+        projectId={projectId}
+        teamMembers={teamMembers.data ?? []}
+        open={createPersonalTaskOpen}
+        onClose={() => setCreatePersonalTaskOpen(false)}
+        onCreated={(taskId) => navigate(`/personal-tasks/${taskId}`)}
       />
     </Flex>
   )

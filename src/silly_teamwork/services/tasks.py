@@ -5,13 +5,18 @@ from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from silly_teamwork.models.enums import ProjectRole, TaskRole, TaskStatus
+from silly_teamwork.models.enums import (
+    AttachmentMode,
+    ProjectRole,
+    TaskRole,
+    TaskStatus,
+    TaskType,
+)
 from silly_teamwork.models.project_member import ProjectMember
 from silly_teamwork.models.task import Task
 from silly_teamwork.models.task_member import TaskMember
 from silly_teamwork.models.user import User
 from silly_teamwork.repositories import (
-    files,
     project_members,
     projects,
     task_members,
@@ -21,7 +26,6 @@ from silly_teamwork.repositories import (
 from silly_teamwork.schemas.task import TaskCreate, TaskMemberAdd, TaskUpdate
 from silly_teamwork.services.collaboration_access import CollaborationAccessService
 from silly_teamwork.services.exceptions import (
-    InvalidDeadlineError,
     InvalidStatusTransitionError,
     ProjectAccessDeniedError,
     ProjectMemberNotFoundError,
@@ -32,18 +36,8 @@ from silly_teamwork.services.exceptions import (
     TaskNotFoundError,
 )
 from silly_teamwork.services.file_cleanup import FileCleanupService
-
-TASK_TRANSITIONS: dict[TaskStatus, frozenset[TaskStatus]] = {
-    TaskStatus.TODO: frozenset({TaskStatus.IN_PROGRESS, TaskStatus.CANCELLED}),
-    TaskStatus.IN_PROGRESS: frozenset(
-        {TaskStatus.TODO, TaskStatus.IN_REVIEW, TaskStatus.DONE, TaskStatus.CANCELLED}
-    ),
-    TaskStatus.IN_REVIEW: frozenset(
-        {TaskStatus.IN_PROGRESS, TaskStatus.DONE, TaskStatus.CANCELLED}
-    ),
-    TaskStatus.DONE: frozenset({TaskStatus.IN_PROGRESS}),
-    TaskStatus.CANCELLED: frozenset({TaskStatus.TODO}),
-}
+from silly_teamwork.services.task_deletion import TaskDeletionService
+from silly_teamwork.services.task_rules import TASK_TRANSITIONS, validate_task_dates
 
 COLLABORATOR_TRANSITIONS = {
     (TaskStatus.TODO, TaskStatus.IN_PROGRESS),
@@ -63,7 +57,7 @@ class TaskService:
         cleanup_service: FileCleanupService | None = None,
     ) -> None:
         self.access = access_service or CollaborationAccessService()
-        self.cleanup = cleanup_service or FileCleanupService()
+        self.deletion = TaskDeletionService(cleanup_service)
 
     async def create_task(
         self,
@@ -89,6 +83,8 @@ class TaskService:
                 starts_at=payload.starts_at,
                 due_at=payload.due_at,
                 created_by_id=current_user.id,
+                task_type=TaskType.COLLABORATIVE,
+                attachment_mode=AttachmentMode.SHARED,
             )
             tasks.add(session, task)
             await session.flush()
@@ -112,7 +108,9 @@ class TaskService:
         self, session: AsyncSession, current_user: User, project_id: UUID
     ) -> list[Task]:
         await self.access.require_project_access(session, current_user, project_id)
-        return await tasks.list_for_project(session, project_id)
+        return await tasks.list_for_project(
+            session, project_id, task_type=TaskType.COLLABORATIVE
+        )
 
     async def update_task(
         self,
@@ -146,20 +144,10 @@ class TaskService:
         task = await tasks.get_by_id(session, task_id)
         if task is None:
             raise TaskNotFoundError("Task not found")
+        self._require_collaborative(task)
         if not await self.access.can_delete_task(session, current_user, task_id):
             raise TaskAccessDeniedError("Task deletion permission required")
-
-        task_files = await files.list_task_files(session, task_id)
-        cleanup_batch = await self.cleanup.stage(file.storage_key for file in task_files)
-        try:
-            await tasks.delete(session, task)
-            await session.flush()
-            await session.commit()
-        except Exception:
-            await session.rollback()
-            await self.cleanup.restore(cleanup_batch)
-            raise
-        await self.cleanup.finish(cleanup_batch)
+        await self.deletion.delete(session, task)
 
     async def change_status(
         self,
@@ -169,6 +157,7 @@ class TaskService:
         target: TaskStatus,
     ) -> Task:
         task = await self.access.require_task_access(session, current_user, task_id)
+        self._require_collaborative(task)
         if target is task.status:
             return task
         if target not in TASK_TRANSITIONS[task.status]:
@@ -206,7 +195,8 @@ class TaskService:
     async def list_members(
         self, session: AsyncSession, current_user: User, task_id: UUID
     ) -> list[TaskMember]:
-        await self.access.require_task_access(session, current_user, task_id)
+        task = await self.access.require_task_access(session, current_user, task_id)
+        self._require_collaborative(task)
         return await task_members.list_for_task(session, task_id)
 
     async def add_member(
@@ -217,6 +207,7 @@ class TaskService:
         payload: TaskMemberAdd,
     ) -> TaskMember:
         task = await self._require_manage(session, current_user, task_id)
+        self._require_collaborative(task)
         await self._require_project_member(session, task.project_id, payload.user_id)
         if await task_members.get_by_task_and_user(session, task_id, payload.user_id) is not None:
             raise TaskMemberConflictError("User is already a task member")
@@ -241,7 +232,8 @@ class TaskService:
         task_id: UUID,
         user_id: UUID,
     ) -> None:
-        await self._require_manage(session, current_user, task_id)
+        task = await self._require_manage(session, current_user, task_id)
+        self._require_collaborative(task)
         membership = await task_members.get_by_task_and_user(session, task_id, user_id)
         if membership is None:
             raise TaskMemberNotFoundError("Task member not found")
@@ -265,6 +257,7 @@ class TaskService:
         task = await tasks.get_by_id(session, task_id)
         if task is None:
             raise TaskNotFoundError("Task not found")
+        self._require_collaborative(task)
         if not await self.access.can_manage_project(session, current_user, task.project_id):
             raise TaskAccessDeniedError("Project management permission required")
         await self._require_project_member(session, task.project_id, new_owner_user_id)
@@ -302,6 +295,7 @@ class TaskService:
         task = await tasks.get_by_id(session, task_id)
         if task is None:
             raise TaskNotFoundError("Task not found")
+        self._require_collaborative(task)
         if not await self.access.can_manage_task(session, current_user, task_id):
             raise TaskAccessDeniedError("Task management permission required")
         return task
@@ -338,8 +332,12 @@ class TaskService:
 
     @staticmethod
     def _validate_dates(starts_at: datetime | None, due_at: datetime | None) -> None:
-        if starts_at is not None and due_at is not None and due_at < starts_at:
-            raise InvalidDeadlineError("due_at must not be before starts_at")
+        validate_task_dates(starts_at, due_at)
+
+    @staticmethod
+    def _require_collaborative(task: Task) -> None:
+        if task.task_type is not TaskType.COLLABORATIVE:
+            raise TaskAccessDeniedError("Collaborative task operation required")
 
     @staticmethod
     def _optional_text(value: str | None) -> str | None:

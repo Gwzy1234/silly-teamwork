@@ -52,3 +52,17 @@ async def list_leader_team_ids(session: AsyncSession, user_id: UUID) -> set[UUID
         )
     )
     return set(result.scalars().all())
+
+
+async def list_existing_user_ids(
+    session: AsyncSession, team_id: UUID, user_ids: list[UUID]
+) -> set[UUID]:
+    if not user_ids:
+        return set()
+    result = await session.execute(
+        select(TeamMember.user_id).where(
+            TeamMember.team_id == team_id,
+            TeamMember.user_id.in_(user_ids),
+        )
+    )
+    return set(result.scalars().all())

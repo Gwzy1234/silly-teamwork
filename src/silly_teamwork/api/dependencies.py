@@ -15,7 +15,12 @@ from silly_teamwork.services.auth import AuthService, get_auth_service
 from silly_teamwork.services.deadlines import DeadlineService, get_deadline_service
 from silly_teamwork.services.files import FileService, get_file_service
 from silly_teamwork.services.notifications import NotificationService, get_notification_service
+from silly_teamwork.services.personal_tasks import PersonalTaskService, get_personal_task_service
 from silly_teamwork.services.projects import ProjectService, get_project_service
+from silly_teamwork.services.task_assignments import (
+    TaskAssignmentService,
+    get_task_assignment_service,
+)
 from silly_teamwork.services.tasks import TaskService, get_task_service
 from silly_teamwork.services.teams import TeamService, get_team_service
 from silly_teamwork.services.users import UserService, get_user_service
@@ -30,6 +35,12 @@ FileServiceDep = Annotated[FileService, Depends(get_file_service)]
 NotificationServiceDep = Annotated[NotificationService, Depends(get_notification_service)]
 DeadlineServiceDep = Annotated[DeadlineService, Depends(get_deadline_service)]
 UserServiceDep = Annotated[UserService, Depends(get_user_service)]
+PersonalTaskServiceDep = Annotated[
+    PersonalTaskService, Depends(get_personal_task_service)
+]
+TaskAssignmentServiceDep = Annotated[
+    TaskAssignmentService, Depends(get_task_assignment_service)
+]
 
 bearer_scheme = HTTPBearer(
     auto_error=False,

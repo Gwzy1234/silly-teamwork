@@ -15,6 +15,7 @@ def test_all_expected_tables_are_registered() -> None:
         "projects",
         "system_admins",
         "task_members",
+        "task_assignments",
         "tasks",
         "team_members",
         "teams",
@@ -27,6 +28,7 @@ def test_membership_tables_prevent_duplicate_members() -> None:
         "team_members": {"team_id", "user_id"},
         "project_members": {"project_id", "user_id"},
         "task_members": {"task_id", "user_id"},
+        "task_assignments": {"task_id", "user_id"},
     }
 
     for table_name, expected_columns in expected_unique_columns.items():
@@ -67,3 +69,21 @@ def test_notification_indexes_and_history_preserving_foreign_keys() -> None:
     }
     assert ondelete_by_column["related_task_id"] == "SET NULL"
     assert ondelete_by_column["related_project_id"] == "SET NULL"
+
+
+def test_task_assignment_indexes_and_cascade_foreign_keys() -> None:
+    table = Base.metadata.tables["task_assignments"]
+    indexed_columns = {
+        tuple(column.name for column in index.columns) for index in table.indexes
+    }
+    assert {
+        ("task_id",),
+        ("user_id",),
+        ("user_id", "status"),
+    }.issubset(indexed_columns)
+
+    ondelete_by_column = {
+        next(iter(constraint.columns)).name: constraint.ondelete
+        for constraint in table.foreign_key_constraints
+    }
+    assert ondelete_by_column == {"task_id": "CASCADE", "user_id": "CASCADE"}
