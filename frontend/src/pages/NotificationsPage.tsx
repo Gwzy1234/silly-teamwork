@@ -1,8 +1,11 @@
 import { CheckOutlined } from '@ant-design/icons'
 import { Alert, App, Badge, Button, Card, Empty, Flex, List, Space, Typography } from 'antd'
-import dayjs from 'dayjs'
 import { useNavigate } from 'react-router-dom'
 import { getApiErrorMessage } from '../api/errors'
+import {
+  formatNotificationContent,
+  formatNotificationDateTime,
+} from '../features/notifications/formatters'
 import {
   useMarkAllNotificationsAsRead,
   useMarkNotificationAsRead,
@@ -96,9 +99,11 @@ export function NotificationsPage() {
                     }
                     description={
                       <Flex vertical gap={6}>
-                        <Typography.Text type="secondary">{notification.content}</Typography.Text>
+                        <Typography.Text type="secondary">
+                          {formatNotificationContent(notification.content)}
+                        </Typography.Text>
                         <Typography.Text type="secondary" className="notification-time">
-                          {dayjs(notification.created_at).format('YYYY-MM-DD HH:mm')}
+                          {formatNotificationDateTime(notification.created_at)}
                           {target ? ' · 点击查看详情' : ''}
                         </Typography.Text>
                       </Flex>
