@@ -67,6 +67,13 @@ async def get_by_task_and_user(
     return result.scalar_one_or_none()
 
 
+async def list_task_ids_for_user(session: AsyncSession, user_id: UUID) -> list[UUID]:
+    result = await session.execute(
+        select(TaskAssignment.task_id).where(TaskAssignment.user_id == user_id)
+    )
+    return list(result.scalars().all())
+
+
 async def list_for_task(session: AsyncSession, task_id: UUID) -> list[TaskAssignment]:
     result = await session.execute(
         _with_context(

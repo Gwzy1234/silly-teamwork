@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql.elements import ColumnElement
 from sqlalchemy.sql.selectable import Select
 
+from silly_teamwork.models.enums import TaskType
 from silly_teamwork.models.file import File
 from silly_teamwork.models.project import Project
 from silly_teamwork.models.task import Task
@@ -86,7 +87,8 @@ async def list_accessible_file_index(
     can_access_all_files: bool,
     leader_team_ids: frozenset[UUID],
     accessible_project_ids: frozenset[UUID],
-    directly_accessible_task_ids: frozenset[UUID],
+    collaborative_task_ids: frozenset[UUID],
+    personal_task_ids: frozenset[UUID],
     query: str | None = None,
     team_id: UUID | None = None,
     project_id: UUID | None = None,
@@ -98,7 +100,8 @@ async def list_accessible_file_index(
             _file_access_condition(
                 leader_team_ids,
                 accessible_project_ids,
-                directly_accessible_task_ids,
+                collaborative_task_ids,
+                personal_task_ids,
             )
         )
     if query:
@@ -117,9 +120,23 @@ async def list_project_file_index(
     session: AsyncSession,
     project_id: UUID,
     *,
+    can_access_all_files: bool,
+    leader_team_ids: frozenset[UUID],
+    accessible_project_ids: frozenset[UUID],
+    collaborative_task_ids: frozenset[UUID],
+    personal_task_ids: frozenset[UUID],
     query: str | None = None,
 ) -> list[FileIndexRow]:
     statement = _file_index_statement().where(Project.id == project_id)
+    if not can_access_all_files:
+        statement = statement.where(
+            _file_access_condition(
+                leader_team_ids,
+                accessible_project_ids,
+                collaborative_task_ids,
+                personal_task_ids,
+            )
+        )
     if query:
         statement = statement.where(File.original_name.ilike(f"%{query}%"))
     result = await session.execute(statement.order_by(File.created_at.desc(), File.id.desc()))
@@ -143,7 +160,8 @@ def _file_index_statement() -> Select[tuple[File, Project, Task | None, Team, Us
 def _file_access_condition(
     leader_team_ids: frozenset[UUID],
     accessible_project_ids: frozenset[UUID],
-    directly_accessible_task_ids: frozenset[UUID],
+    collaborative_task_ids: frozenset[UUID],
+    personal_task_ids: frozenset[UUID],
 ) -> ColumnElement[bool]:
     project_access = or_(
         Project.team_id.in_(leader_team_ids),
@@ -153,6 +171,19 @@ def _file_access_condition(
         and_(File.project_id.is_not(None), project_access),
         and_(
             File.task_id.is_not(None),
-            or_(project_access, File.task_id.in_(directly_accessible_task_ids)),
+            or_(
+                Project.team_id.in_(leader_team_ids),
+                and_(
+                    Task.task_type == TaskType.COLLABORATIVE,
+                    or_(
+                        Project.id.in_(accessible_project_ids),
+                        File.task_id.in_(collaborative_task_ids),
+                    ),
+                ),
+                and_(
+                    Task.task_type == TaskType.PERSONAL,
+                    File.task_id.in_(personal_task_ids),
+                ),
+            ),
         ),
     )

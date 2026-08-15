@@ -31,7 +31,8 @@ class CollaborationFileAccessScope:
     can_access_all_files: bool
     leader_team_ids: frozenset[UUID]
     project_ids: frozenset[UUID]
-    task_ids: frozenset[UUID]
+    collaborative_task_ids: frozenset[UUID]
+    personal_task_ids: frozenset[UUID]
 
 
 class CollaborationAccessService:
@@ -43,12 +44,14 @@ class CollaborationAccessService:
         is_system_admin = await system_admins.get_by_user_id(session, current_user.id) is not None
         leader_team_ids = await team_members.list_leader_team_ids(session, current_user.id)
         project_ids = await project_members.list_project_ids_for_user(session, current_user.id)
-        task_ids = await task_members.list_task_ids_for_user(session, current_user.id)
+        collaborative_task_ids = await task_members.list_task_ids_for_user(session, current_user.id)
+        personal_task_ids = await task_assignments.list_task_ids_for_user(session, current_user.id)
         return CollaborationFileAccessScope(
             can_access_all_files=is_system_admin,
             leader_team_ids=frozenset(leader_team_ids),
             project_ids=frozenset(project_ids),
-            task_ids=frozenset(task_ids),
+            collaborative_task_ids=frozenset(collaborative_task_ids),
+            personal_task_ids=frozenset(personal_task_ids),
         )
 
     async def require_project_file_access(
@@ -326,6 +329,8 @@ class CollaborationAccessService:
             return False
         if await self._is_team_leader(session, project.team_id, current_user.id):
             return True
+        if file.task_id is not None and task is not None and task.task_type is TaskType.PERSONAL:
+            return False
         membership = await project_members.get_by_project_and_user(
             session, project.id, current_user.id
         )

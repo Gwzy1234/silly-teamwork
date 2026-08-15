@@ -19,6 +19,7 @@ import {
 import dayjs from 'dayjs'
 import { useNavigate, useParams } from 'react-router-dom'
 import { getApiErrorMessage } from '../api/errors'
+import { FilePanel } from '../features/files/components/FilePanel'
 import {
   useDeletePersonalTask,
   usePersonalTask,
@@ -147,6 +148,10 @@ export function PersonalTaskManagePage() {
         </Flex>
       </Card>
 
+      <Card className="content-card" title="任务文件">
+        <FilePanel scope="task" ownerId={task.id} title="共享文件" />
+      </Card>
+
       <Card className="content-card danger-zone-card" title="危险操作">
         <Flex justify="space-between" align="center" gap={16} wrap>
           <div>
@@ -178,4 +183,3 @@ export function PersonalTaskManagePage() {
     </Flex>
   )
 }
-

@@ -22,6 +22,7 @@ import dayjs from 'dayjs'
 import { useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { getApiErrorMessage } from '../api/errors'
+import { FilePanel } from '../features/files/components/FilePanel'
 import { personalTaskStatusOptions } from '../features/personal-tasks/constants'
 import {
   usePersonalTask,
@@ -163,7 +164,10 @@ export function MyTaskDetailPage() {
           </Descriptions.Item>
         </Descriptions>
       </Card>
+
+      <Card className="content-card" title="任务文件">
+        <FilePanel scope="task" ownerId={task.id} title="共享文件" />
+      </Card>
     </Flex>
   )
 }
-

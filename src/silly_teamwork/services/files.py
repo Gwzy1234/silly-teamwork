@@ -128,9 +128,7 @@ class FileService:
     ) -> list[FileListItemResponse]:
         await self.access.require_task_file_access(session, current_user, task_id)
         task_files = await files.list_task_files(session, task_id)
-        return [
-            await self._list_item(session, current_user, file) for file in task_files
-        ]
+        return [await self._list_item(session, current_user, file) for file in task_files]
 
     async def list_file_index(
         self,
@@ -148,7 +146,8 @@ class FileService:
             can_access_all_files=access_scope.can_access_all_files,
             leader_team_ids=access_scope.leader_team_ids,
             accessible_project_ids=access_scope.project_ids,
-            directly_accessible_task_ids=access_scope.task_ids,
+            collaborative_task_ids=access_scope.collaborative_task_ids,
+            personal_task_ids=access_scope.personal_task_ids,
             query=self._normalize_search(query),
             team_id=team_id,
             project_id=project_id,
@@ -164,11 +163,17 @@ class FileService:
         *,
         query: str | None = None,
     ) -> ProjectFileIndexResponse:
-        project = await self.access.require_project_file_access(
-            session, current_user, project_id
-        )
+        project = await self.access.require_project_file_access(session, current_user, project_id)
+        access_scope = await self.access.get_file_access_scope(session, current_user)
         rows = await files.list_project_file_index(
-            session, project_id, query=self._normalize_search(query)
+            session,
+            project_id,
+            can_access_all_files=access_scope.can_access_all_files,
+            leader_team_ids=access_scope.leader_team_ids,
+            accessible_project_ids=access_scope.project_ids,
+            collaborative_task_ids=access_scope.collaborative_task_ids,
+            personal_task_ids=access_scope.personal_task_ids,
+            query=self._normalize_search(query),
         )
         shared_files: list[FileIndexItemResponse] = []
         grouped_tasks: dict[UUID, ProjectFileTaskGroupResponse] = {}
@@ -224,9 +229,7 @@ class FileService:
             raise
         return file
 
-    async def delete_file(
-        self, session: AsyncSession, current_user: User, file_id: UUID
-    ) -> None:
+    async def delete_file(self, session: AsyncSession, current_user: User, file_id: UUID) -> None:
         file = await self._require_file(session, file_id)
         if not await self.access.can_delete_file(session, current_user, file_id):
             raise FileAccessDeniedError("File deletion permission required")
@@ -360,9 +363,7 @@ class FileService:
             uploaded_at=file.created_at,
             team=FileIndexTeamResponse(id=team.id, name=team.name),
             project=FileIndexProjectResponse(id=project.id, name=project.name),
-            task=None
-            if task is None
-            else FileIndexTaskResponse(id=task.id, title=task.title),
+            task=None if task is None else FileIndexTaskResponse(id=task.id, title=task.title),
             uploader=None
             if uploader is None
             else FileIndexUploaderResponse(
