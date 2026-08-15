@@ -20,6 +20,7 @@ from silly_teamwork.services.exceptions import (
     TaskNotFoundError,
 )
 from silly_teamwork.services.file_cleanup import FileCleanupService
+from silly_teamwork.services.notification_schedules import NotificationScheduleService
 from silly_teamwork.services.task_deletion import TaskDeletionService
 from silly_teamwork.services.task_rules import validate_task_dates
 
@@ -29,9 +30,11 @@ class PersonalTaskService:
         self,
         access_service: CollaborationAccessService | None = None,
         cleanup_service: FileCleanupService | None = None,
+        schedule_service: NotificationScheduleService | None = None,
     ) -> None:
         self.access = access_service or CollaborationAccessService()
         self.deletion = TaskDeletionService(cleanup_service)
+        self.schedules = schedule_service or NotificationScheduleService()
 
     async def create_personal_task(
         self,
@@ -62,18 +65,23 @@ class PersonalTaskService:
         try:
             tasks.add(session, task)
             await session.flush()
+            assignments = [
+                TaskAssignment(
+                    task=task,
+                    user_id=user_id,
+                    status=TaskStatus.TODO,
+                )
+                for user_id in payload.assignee_user_ids
+            ]
             task_assignments.add_all(
                 session,
-                [
-                    TaskAssignment(
-                        task=task,
-                        user_id=user_id,
-                        status=TaskStatus.TODO,
-                    )
-                    for user_id in payload.assignee_user_ids
-                ],
+                assignments,
             )
             await session.flush()
+            for assignment in assignments:
+                await self.schedules.create_assignment_deadline_schedules(
+                    session, assignment
+                )
             await session.commit()
         except Exception:
             await session.rollback()

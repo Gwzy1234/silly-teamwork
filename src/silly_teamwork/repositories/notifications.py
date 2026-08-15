@@ -12,6 +12,10 @@ def add(session: AsyncSession, notification: Notification) -> None:
     session.add(notification)
 
 
+async def get_by_id(session: AsyncSession, notification_id: UUID) -> Notification | None:
+    return await session.get(Notification, notification_id)
+
+
 async def find_matching_unread(
     session: AsyncSession,
     *,

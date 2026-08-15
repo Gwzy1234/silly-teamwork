@@ -13,6 +13,7 @@ from silly_teamwork.models.enums import AttachmentMode, TaskPriority, TaskStatus
 if TYPE_CHECKING:
     from silly_teamwork.models.file import File
     from silly_teamwork.models.notification import Notification
+    from silly_teamwork.models.notification_schedule import NotificationSchedule
     from silly_teamwork.models.project import Project
     from silly_teamwork.models.task_assignment import TaskAssignment
     from silly_teamwork.models.task_member import TaskMember
@@ -93,6 +94,9 @@ class Task(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     )
     notifications: Mapped[list[Notification]] = relationship(
         back_populates="related_task", passive_deletes=True
+    )
+    notification_schedules: Mapped[list[NotificationSchedule]] = relationship(
+        back_populates="task", passive_deletes=True
     )
 
     @property

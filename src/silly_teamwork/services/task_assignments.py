@@ -14,6 +14,7 @@ from silly_teamwork.services.exceptions import (
     TaskAssignmentAccessDeniedError,
     TaskAssignmentNotFoundError,
 )
+from silly_teamwork.services.notification_schedules import NotificationScheduleService
 from silly_teamwork.services.task_rules import TASK_TRANSITIONS
 
 EXECUTING_ASSIGNMENT_STATUSES = frozenset(
@@ -22,8 +23,13 @@ EXECUTING_ASSIGNMENT_STATUSES = frozenset(
 
 
 class TaskAssignmentService:
-    def __init__(self, access_service: CollaborationAccessService | None = None) -> None:
+    def __init__(
+        self,
+        access_service: CollaborationAccessService | None = None,
+        schedule_service: NotificationScheduleService | None = None,
+    ) -> None:
         self.access = access_service or CollaborationAccessService()
+        self.schedules = schedule_service or NotificationScheduleService()
 
     async def get_assignment(
         self, session: AsyncSession, current_user: User, assignment_id: UUID
@@ -105,6 +111,7 @@ class TaskAssignmentService:
                     f"from {locked.status.value} to {target.value}"
                 )
             now = datetime.now(UTC)
+            previous_status = locked.status
             if locked.started_at is None and target in EXECUTING_ASSIGNMENT_STATUSES:
                 locked.started_at = now
             locked.status = target
@@ -112,6 +119,14 @@ class TaskAssignmentService:
                 locked.completed_at = now
             elif locked.completed_at is not None:
                 locked.completed_at = None
+            if target in {TaskStatus.DONE, TaskStatus.CANCELLED}:
+                await self.schedules.cancel_assignment_deadline_schedules(
+                    session, locked
+                )
+            elif previous_status in {TaskStatus.DONE, TaskStatus.CANCELLED}:
+                await self.schedules.rebuild_assignment_deadline_schedules(
+                    session, locked
+                )
             await session.flush()
             await session.commit()
             await session.refresh(locked)

@@ -16,6 +16,7 @@ services:
       retries: 10
 
   api:
+    image: silly-teamwork-api:development
     build:
       context: .
       target: development
@@ -24,7 +25,7 @@ services:
       DEBUG: "true"
       SECRET_KEY: local-development-only-change-me
       DATABASE_URL: postgresql+asyncpg://silly_teamwork:silly_teamwork@db:5432/silly_teamwork
-      DEADLINE_REMINDERS_ENABLED: "true"
+      DEADLINE_REMINDERS_ENABLED: "false"
       DEADLINE_REMINDER_INTERVAL_SECONDS: "86400"
       DEADLINE_DUE_SOON_HOURS: "72"
     ports:
@@ -37,6 +38,24 @@ services:
     command: >-
       sh -c "alembic upgrade head &&
       uvicorn silly_teamwork.main:app --host 0.0.0.0 --port 8000 --reload"
+
+  scheduler:
+    image: silly-teamwork-api:development
+    environment:
+      ENVIRONMENT: development
+      SECRET_KEY: local-development-only-change-me
+      DATABASE_URL: postgresql+asyncpg://silly_teamwork:silly_teamwork@db:5432/silly_teamwork
+      DEADLINE_REMINDERS_ENABLED: "false"
+      NOTIFICATION_SCHEDULER_INTERVAL_SECONDS: "60"
+      NOTIFICATION_SCHEDULER_BATCH_SIZE: "100"
+      NOTIFICATION_SCHEDULER_LEASE_SECONDS: "300"
+      NOTIFICATION_SCHEDULER_MAX_ATTEMPTS: "5"
+    depends_on:
+      db:
+        condition: service_healthy
+    command: >-
+      sh -c "alembic upgrade head &&
+      python -m silly_teamwork.scheduler"
 
 volumes:
   postgres_data:

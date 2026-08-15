@@ -11,6 +11,7 @@ def test_all_expected_tables_are_registered() -> None:
         "files",
         "invitation_codes",
         "notifications",
+        "notification_schedules",
         "project_members",
         "projects",
         "system_admins",
@@ -69,6 +70,44 @@ def test_notification_indexes_and_history_preserving_foreign_keys() -> None:
     }
     assert ondelete_by_column["related_task_id"] == "SET NULL"
     assert ondelete_by_column["related_project_id"] == "SET NULL"
+
+
+def test_notification_schedule_constraints_indexes_and_foreign_keys() -> None:
+    table = Base.metadata.tables["notification_schedules"]
+    indexed_columns = {
+        tuple(column.name for column in index.columns) for index in table.indexes
+    }
+    assert {
+        ("status", "scheduled_for"),
+        ("task_id",),
+        ("task_assignment_id",),
+        ("user_id",),
+    }.issubset(indexed_columns)
+
+    unique_index_column_sets = {
+        frozenset(column.name for column in index.columns)
+        for index in table.indexes
+        if index.unique
+    }
+    assert {
+        frozenset(
+            {"task_id", "user_id", "notification_type", "lead_time_minutes"}
+        ),
+        frozenset(
+            {"task_assignment_id", "notification_type", "lead_time_minutes"}
+        ),
+    }.issubset(unique_index_column_sets)
+
+    ondelete_by_column = {
+        next(iter(constraint.columns)).name: constraint.ondelete
+        for constraint in table.foreign_key_constraints
+    }
+    assert ondelete_by_column == {
+        "user_id": "CASCADE",
+        "task_id": "CASCADE",
+        "task_assignment_id": "CASCADE",
+        "sent_notification_id": "SET NULL",
+    }
 
 
 def test_task_assignment_indexes_and_cascade_foreign_keys() -> None:

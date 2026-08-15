@@ -3,6 +3,7 @@
 from silly_teamwork.repositories import (
     files,
     invitation_codes,
+    notification_schedules,
     notifications,
     project_members,
     projects,
@@ -18,6 +19,7 @@ from silly_teamwork.repositories import (
 __all__ = [
     "files",
     "invitation_codes",
+    "notification_schedules",
     "notifications",
     "project_members",
     "projects",

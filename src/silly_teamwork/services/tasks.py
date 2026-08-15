@@ -36,6 +36,7 @@ from silly_teamwork.services.exceptions import (
     TaskNotFoundError,
 )
 from silly_teamwork.services.file_cleanup import FileCleanupService
+from silly_teamwork.services.notification_schedules import NotificationScheduleService
 from silly_teamwork.services.task_deletion import TaskDeletionService
 from silly_teamwork.services.task_rules import TASK_TRANSITIONS, validate_task_dates
 
@@ -55,9 +56,11 @@ class TaskService:
         self,
         access_service: CollaborationAccessService | None = None,
         cleanup_service: FileCleanupService | None = None,
+        schedule_service: NotificationScheduleService | None = None,
     ) -> None:
         self.access = access_service or CollaborationAccessService()
         self.deletion = TaskDeletionService(cleanup_service)
+        self.schedules = schedule_service or NotificationScheduleService()
 
     async def create_task(
         self,
@@ -93,6 +96,7 @@ class TaskService:
                 TaskMember(task_id=task.id, user_id=owner_id, role=TaskRole.OWNER),
             )
             await session.flush()
+            await self.schedules.create_task_deadline_schedules(session, task)
             await session.commit()
         except Exception:
             await session.rollback()
@@ -121,6 +125,7 @@ class TaskService:
     ) -> Task:
         task = await self._require_manage(session, current_user, task_id)
         values = payload.model_dump(exclude_unset=True)
+        due_at_changed = "due_at" in values and values["due_at"] != task.due_at
         starts_at = values.get("starts_at", task.starts_at)
         due_at = values.get("due_at", task.due_at)
         self._validate_dates(starts_at, due_at)
@@ -131,6 +136,8 @@ class TaskService:
                 elif field == "description":
                     value = self._optional_text(value)
                 setattr(task, field, value)
+            if due_at_changed:
+                await self.schedules.rebuild_task_deadline_schedules(session, task)
             await session.flush()
             await session.commit()
         except Exception:
@@ -180,11 +187,16 @@ class TaskService:
             if not allowed:
                 raise TaskAccessDeniedError("Task status permission required")
         try:
+            previous_status = task.status
             task.status = target
             if target is TaskStatus.DONE:
                 task.completed_at = datetime.now(UTC)
             elif task.completed_at is not None:
                 task.completed_at = None
+            if target in {TaskStatus.DONE, TaskStatus.CANCELLED}:
+                await self.schedules.cancel_task_deadline_schedules(session, task)
+            elif previous_status in {TaskStatus.DONE, TaskStatus.CANCELLED}:
+                await self.schedules.rebuild_task_deadline_schedules(session, task)
             await session.flush()
             await session.commit()
         except Exception:

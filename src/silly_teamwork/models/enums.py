@@ -66,3 +66,11 @@ class NotificationType(StrEnum):
     TASK_OVERDUE = "task_overdue"
     PROJECT_DUE_SOON = "project_due_soon"
     SYSTEM = "system"
+
+
+class NotificationScheduleStatus(StrEnum):
+    PENDING = "pending"
+    PROCESSING = "processing"
+    SENT = "sent"
+    CANCELLED = "cancelled"
+    FAILED = "failed"

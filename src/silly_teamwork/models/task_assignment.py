@@ -11,6 +11,7 @@ from silly_teamwork.db.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
 from silly_teamwork.models.enums import TaskStatus
 
 if TYPE_CHECKING:
+    from silly_teamwork.models.notification_schedule import NotificationSchedule
     from silly_teamwork.models.task import Task
     from silly_teamwork.models.user import User
 
@@ -48,3 +49,6 @@ class TaskAssignment(UUIDPrimaryKeyMixin, TimestampMixin, Base):
 
     task: Mapped[Task] = relationship(back_populates="assignments")
     user: Mapped[User] = relationship(back_populates="task_assignments")
+    notification_schedules: Mapped[list[NotificationSchedule]] = relationship(
+        back_populates="task_assignment", passive_deletes=True
+    )

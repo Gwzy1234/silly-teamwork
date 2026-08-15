@@ -31,6 +31,7 @@ class NotificationService:
         related_task_id: UUID | None = None,
         related_project_id: UUID | None = None,
         commit: bool = True,
+        deduplicate: bool = True,
     ) -> Notification:
         user = await users.get_by_id(session, user_id)
         if user is None:
@@ -49,17 +50,18 @@ class NotificationService:
             NotificationType.TASK_DUE_SOON,
             NotificationType.TASK_OVERDUE,
         }
-        existing = await notifications.find_matching_unread(
-            session,
-            user_id=user_id,
-            notification_type=notification_type,
-            title=None if is_task_deadline_reminder else normalized_title,
-            content=None if is_task_deadline_reminder else normalized_content,
-            related_task_id=related_task_id,
-            related_project_id=related_project_id,
-        )
-        if existing is not None:
-            return existing
+        if deduplicate:
+            existing = await notifications.find_matching_unread(
+                session,
+                user_id=user_id,
+                notification_type=notification_type,
+                title=None if is_task_deadline_reminder else normalized_title,
+                content=None if is_task_deadline_reminder else normalized_content,
+                related_task_id=related_task_id,
+                related_project_id=related_project_id,
+            )
+            if existing is not None:
+                return existing
 
         notification = Notification(
             user_id=user_id,

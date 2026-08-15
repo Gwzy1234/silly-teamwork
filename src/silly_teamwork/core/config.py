@@ -38,9 +38,16 @@ class Settings(BaseSettings):
     max_avatar_size: int = Field(default=5 * 1024 * 1024, gt=0)
     max_upload_size_mb: int = Field(default=20, gt=0)
 
-    deadline_reminders_enabled: bool = True
+    # Kept for rollback compatibility. The independent notification scheduler is
+    # the default reminder path; enabling this would run the legacy API scanner.
+    deadline_reminders_enabled: bool = False
     deadline_reminder_interval_seconds: int = Field(default=300, gt=0)
     deadline_due_soon_hours: int = Field(default=72, gt=0)
+
+    notification_scheduler_interval_seconds: int = Field(default=60, gt=0)
+    notification_scheduler_batch_size: int = Field(default=100, gt=0)
+    notification_scheduler_lease_seconds: int = Field(default=300, gt=0)
+    notification_scheduler_max_attempts: int = Field(default=5, gt=0)
 
     seed_admin_username: str = "admin"
     seed_admin_password: SecretStr = SecretStr("admin123456")
